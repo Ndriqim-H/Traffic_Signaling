@@ -54,19 +54,12 @@ namespace Traffic_Signaling
 
             //Create car paths
             List<Path> paths = new();
-            //List<Intersection> intersectionsInPath = new();
-
             for (int i = S + 1; i < V + S + 1; i++)
             {
                 var arr = input[i].Split(' ');
-                //List<string> pathStreets = new();
-                //for (int j = 0; j < pathStreets.Count; j++)
-                //{
-                //    pathStreets.Add(arr[j + 1]);
-                //}
-
                 List<Street> streetsInPath = new();
-                //Get all the streets from the path except the last one
+                //Get all the streets from the path except the last one, the last street is saved
+                //separately as the destination
                 for (int j = 1; j < arr.Length - 1; j++)
                 {
                     var street = streets.Where(t => t.Name == arr[j]).First();
@@ -77,10 +70,7 @@ namespace Traffic_Signaling
                         Ends = street.Ends,
                         Starts = street.Starts,
                         Time = street.Time,
-                    });
-                    
-
-                    
+                    });    
                 }
 
                 paths.Add(new Path()
@@ -90,12 +80,9 @@ namespace Traffic_Signaling
                     Streets = streetsInPath,
                     Destination = arr[arr.Length - 1]
                 });
-
-                
-
-
             }
 
+            //Find the intersections crossed in each path
             for (int i = 0; i < paths.Count; i++)
             {
                 List<Intersection> intersactionsInPath = new();
@@ -110,6 +97,7 @@ namespace Traffic_Signaling
                 
             }
 
+            //Find the used intersections
             List<Intersection> usedIntersections = new();
             for (int i = 0; i < paths.Count; i++)
             {
@@ -126,6 +114,7 @@ namespace Traffic_Signaling
                 }
             }
 
+            //Find the streets in paths
             List<int> pathStreetIntersectionIds = new List<int>();
             List<Street> streetsInPaths = new List<Street>();
             for (int i = 0; i < paths.Count; i++)
@@ -139,6 +128,8 @@ namespace Traffic_Signaling
                 
             }
 
+
+            //Connect used intersections with the streets that are crossed by the cars
             for (int i = 0; i < usedIntersections.Count; i++)
             {
                 for (int j = 0; j < streetsInPaths.Count; j++)
@@ -148,19 +139,15 @@ namespace Traffic_Signaling
                 }
             }
 
-            //for (int i = 0; i < paths.Count; i++)
-            //{
-
-            //    for (int j = 0; j < usedIntersections.Count; j++)
-            //    {
-            //        var pathIntersectionsIds = paths[i].Intersections.Select(t => t.Id).ToList();
-            //        if (pathIntersectionsIds.Contains(usedIntersections[j].Id))
-            //        {
-            //            usedIntersections[j].Streets.Add(paths[i].Streets.Where(t => t.Ends == usedIntersections[j].Id).First());
-            //        }
-            //    }
-            //}
-
+            //Now there are 3 main scenarioes for each intersection:
+            // 1. An intersection is never used by any car,
+            //those have been removed when the "usedIntersections" list was being filled
+            // 2. An intersection which has only 1 street in all paths, here we give a constant duration
+            //since the traffic light is going to always be green for that street
+            // 3. When an intersection has 2 or more streets going into it, this is the case where the
+            //optimization will happen since we may need to change the the duration of the green intervals.
+            //Here, however, since it's the initial solution, we have given the interval equal to the
+            //number of streets going inwards, making it so every car goes one by one into the intersection.
 
             for (int i = 0; i < usedIntersections.Count; i++)
             {
