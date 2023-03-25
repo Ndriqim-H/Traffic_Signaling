@@ -96,8 +96,6 @@ namespace Traffic_Signaling
 
             }
 
-
-            
             for (int i = 0; i < paths.Count; i++)
             {
                 List<Intersection> intersactionsInPath = new();
@@ -111,23 +109,76 @@ namespace Traffic_Signaling
                 paths[i].Intersections = intersactionsInPath;
                 
             }
-            //for (int i = 0; i < intersectionsInPath.Count; i++)
+
+            List<Intersection> usedIntersections = new();
+            for (int i = 0; i < paths.Count; i++)
+            {
+                var intersectionsInPaths = paths[i].Intersections.ToList();
+                for (int j = 0; j < intersectionsInPaths.Count; j++)
+                {
+                    var usedInterSectionsIds = usedIntersections.Select(t=> t.Id).ToList();
+                    if (!usedInterSectionsIds.Contains(intersectionsInPaths[j].Id))
+                        usedIntersections.Add(new Intersection()
+                        {
+                            Id = intersectionsInPaths[j].Id,
+                            Streets = new()
+                        });
+                }
+            }
+
+            List<int> pathStreetIntersectionIds = new List<int>();
+            List<Street> streetsInPaths = new List<Street>();
+            for (int i = 0; i < paths.Count; i++)
+            {
+                for (int j = 0; j < paths[i].Streets.Count; j++)
+                {
+                    Street streetInPath = paths[i].Streets[j];
+                    if(!streetsInPaths.Select(t=>t.Id).Contains(streetInPath.Id))
+                        streetsInPaths.Add(streetInPath);
+                }
+                
+            }
+
+            for (int i = 0; i < usedIntersections.Count; i++)
+            {
+                for (int j = 0; j < streetsInPaths.Count; j++)
+                {
+                    if (streetsInPaths[j].Ends == usedIntersections[i].Id)
+                        usedIntersections[i].Streets.Add(streetsInPaths[j]);
+                }
+            }
+
+            //for (int i = 0; i < paths.Count; i++)
             //{
-            //    if (intersectionsInPath[i].Streets.Count == 1)
+
+            //    for (int j = 0; j < usedIntersections.Count; j++)
             //    {
-            //        intersectionsInPath[i].GreenInterval = 1;
-            //        intersectionsInPath[i].GreenTimeForStreets = new List<int> { 1 };
-            //    }
-            //    else
-            //    {
-            //        intersectionsInPath[i].GreenInterval = intersectionsInPath[i].Streets.Count;
-            //        intersectionsInPath[i].GreenTimeForStreets = new();
-            //        for (int j = 0; j < intersectionsInPath[i].Streets.Count; j++)
+            //        var pathIntersectionsIds = paths[i].Intersections.Select(t => t.Id).ToList();
+            //        if (pathIntersectionsIds.Contains(usedIntersections[j].Id))
             //        {
-            //            intersectionsInPath[i].GreenTimeForStreets.Add(1);
+            //            usedIntersections[j].Streets.Add(paths[i].Streets.Where(t => t.Ends == usedIntersections[j].Id).First());
             //        }
             //    }
             //}
+
+
+            for (int i = 0; i < usedIntersections.Count; i++)
+            {
+                if (usedIntersections[i].Streets.Count == 1)
+                {
+                    usedIntersections[i].GreenInterval = 1;
+                    usedIntersections[i].GreenTimeForStreets = new List<int> { 1 };
+                }
+                else
+                {
+                    usedIntersections[i].GreenInterval = usedIntersections[i].Streets.Count;
+                    usedIntersections[i].GreenTimeForStreets = new();
+                    for (int j = 0; j < usedIntersections[i].Streets.Count; j++)
+                    {
+                        usedIntersections[i].GreenTimeForStreets.Add(1);
+                    }
+                }
+            }
             Console.WriteLine("Hello World!");
 
         }
