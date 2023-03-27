@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -69,7 +70,8 @@ namespace Traffic_Signaling
                         Id = street1.Id,
                         Ends = street1.Ends,
                         Starts = street1.Starts,
-                        Time = j == 1 ? 0 : street1.Time,
+                        Time = j == 1 ? 0 : street1.Time, //First street is 0 because we start from the
+                                                          //end of the first street, i.e. at the intersection
                     });
                 }
 
@@ -157,7 +159,6 @@ namespace Traffic_Signaling
                 if (usedIntersections[i].Streets.Count == 1)
                 {
                     usedIntersections[i].GreenInterval = 1;
-                    usedIntersections[i].GreenTimeForStreets = new List<int> { 1 };
                     var str = usedIntersections[i].Streets[0];
                     usedIntersections[i].StreetTime = new()
                     {
@@ -167,23 +168,22 @@ namespace Traffic_Signaling
                 else
                 {
                     usedIntersections[i].GreenInterval = usedIntersections[i].Streets.Count;
-                    usedIntersections[i].GreenTimeForStreets = new();
+                    
                     usedIntersections[i].StreetTime = new();
                     int min = 0;
-                    int max = 1;
+                    int max = 2;
                     for (int j = 0; j < usedIntersections[i].Streets.Count; j++)
                     {
-                        usedIntersections[i].GreenTimeForStreets.Add(1);
                         var str = usedIntersections[i].Streets[j];
                         usedIntersections[i].StreetTime.Add(str.Name, new[] { min, max });
-                        min++;
-                        max++;
+                        min *= 2;
+                        max *= 2;
                     }
                 }
             }
 
             int eval = EvaluationFunction(paths, usedIntersections, F, D);
-            Console.WriteLine($"The calculated evaluation function is: {eval}");
+            Console.WriteLine($"The calculated evaluation function is: {eval.ToString("#,#")}");
             //Console.WriteLine("Hello World!");
 
         }
@@ -231,7 +231,6 @@ namespace Traffic_Signaling
         public int Id { get; set; }
         public List<Street> Streets { get; set; }
         public int GreenInterval { get; set; }
-        public List<int> GreenTimeForStreets { get; set; }
         public Dictionary<string, int[]> StreetTime { get; set; }
     }
 
