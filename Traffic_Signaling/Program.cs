@@ -10,6 +10,7 @@ namespace Traffic_Signaling
 {
     class Program
     {
+        //A statistic on how much time was spent waiting a red light for every car.
         public static int NumberOfStops { get; set; } = 0;
         public static void Main(string[] args)
         {
