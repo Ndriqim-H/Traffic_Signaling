@@ -26,7 +26,7 @@ namespace Traffic_Signaling
             //Number of points for reaching the destination on time
             var F = int.Parse(parameters[4]);
 
-            
+
             //Parse all the streets
             List<Street> streets = new();
             for (int i = 1; i <= S; i++)
@@ -48,7 +48,7 @@ namespace Traffic_Signaling
                 intersections.Add(new Intersection()
                 {
                     Id = i,
-                    Streets = streets.Where(t=>t.Ends == i).ToList(),
+                    Streets = streets.Where(t => t.Ends == i).ToList(),
                 });
             }
 
@@ -62,23 +62,25 @@ namespace Traffic_Signaling
                 //separately as the destination
                 for (int j = 1; j < arr.Length - 1; j++)
                 {
-                    var street = streets.Where(t => t.Name == arr[j]).First();
+                    var street1 = streets.Where(t => t.Name == arr[j]).First();
                     streetsInPath.Add(new Street()
                     {
                         Name = arr[j],
-                        Id = street.Id,
-                        Ends = street.Ends,
-                        Starts = street.Starts,
-                        Time = street.Time,
-                    });    
+                        Id = street1.Id,
+                        Ends = street1.Ends,
+                        Starts = street1.Starts,
+                        Time = j == 1 ? 0 : street1.Time,
+                    });
                 }
 
+                var street = streets.Where(t => t.Name == arr[arr.Length - 1]).First();
                 paths.Add(new Path()
                 {
                     Id = i - (S + 1),
                     NumberOfIntersections = int.Parse(arr[0]),
                     Streets = streetsInPath,
-                    Destination = arr[arr.Length - 1]
+                    DestinationName = street.Name,
+                    DestinationTime = street.Time
                 });
             }
 
@@ -86,15 +88,14 @@ namespace Traffic_Signaling
             for (int i = 0; i < paths.Count; i++)
             {
                 List<Intersection> intersactionsInPath = new();
-                
                 for (int j = 0; j < paths[i].Streets.Count; j++)
                 {
-                    
-                    Intersection intersection = intersections.Where(t=>t.Id == paths[i].Streets[j].Ends).First();
+
+                    Intersection intersection = intersections.Where(t => t.Id == paths[i].Streets[j].Ends).First();
                     intersactionsInPath.Add(intersection);
                 }
                 paths[i].Intersections = intersactionsInPath;
-                
+
             }
 
             //Find the used intersections
@@ -104,7 +105,7 @@ namespace Traffic_Signaling
                 var intersectionsInPaths = paths[i].Intersections.ToList();
                 for (int j = 0; j < intersectionsInPaths.Count; j++)
                 {
-                    var usedInterSectionsIds = usedIntersections.Select(t=> t.Id).ToList();
+                    var usedInterSectionsIds = usedIntersections.Select(t => t.Id).ToList();
                     if (!usedInterSectionsIds.Contains(intersectionsInPaths[j].Id))
                         usedIntersections.Add(new Intersection()
                         {
@@ -115,17 +116,16 @@ namespace Traffic_Signaling
             }
 
             //Find the streets in paths
-            List<int> pathStreetIntersectionIds = new List<int>();
             List<Street> streetsInPaths = new List<Street>();
             for (int i = 0; i < paths.Count; i++)
             {
                 for (int j = 0; j < paths[i].Streets.Count; j++)
                 {
                     Street streetInPath = paths[i].Streets[j];
-                    if(!streetsInPaths.Select(t=>t.Id).Contains(streetInPath.Id))
+                    if (!streetsInPaths.Select(t => t.Id).Contains(streetInPath.Id))
                         streetsInPaths.Add(streetInPath);
                 }
-                
+
             }
 
 
@@ -135,7 +135,10 @@ namespace Traffic_Signaling
                 for (int j = 0; j < streetsInPaths.Count; j++)
                 {
                     if (streetsInPaths[j].Ends == usedIntersections[i].Id)
+                    {
                         usedIntersections[i].Streets.Add(streetsInPaths[j]);
+                    }
+
                 }
             }
 
@@ -155,22 +158,73 @@ namespace Traffic_Signaling
                 {
                     usedIntersections[i].GreenInterval = 1;
                     usedIntersections[i].GreenTimeForStreets = new List<int> { 1 };
+                    var str = usedIntersections[i].Streets[0];
+                    usedIntersections[i].StreetTime = new()
+                    {
+                        {str.Name, new[]{0,int.MaxValue } },
+                    };
                 }
                 else
                 {
                     usedIntersections[i].GreenInterval = usedIntersections[i].Streets.Count;
                     usedIntersections[i].GreenTimeForStreets = new();
+                    usedIntersections[i].StreetTime = new();
+                    int min = 0;
+                    int max = 1;
                     for (int j = 0; j < usedIntersections[i].Streets.Count; j++)
                     {
                         usedIntersections[i].GreenTimeForStreets.Add(1);
+                        var str = usedIntersections[i].Streets[j];
+                        usedIntersections[i].StreetTime.Add(str.Name, new[] { min, max });
+                        min++;
+                        max++;
                     }
                 }
             }
-            Console.WriteLine("Hello World!");
+
+            int eval = EvaluationFunction(paths, usedIntersections, F, D);
+            Console.WriteLine($"The calculated evaluation function is: {eval}");
+            //Console.WriteLine("Hello World!");
 
         }
 
+        static int EvaluationFunction(List<Path> paths, List<Intersection> intersections, int F, int D)
+        {
+            int score = 0;
+            for (int i = 0; i < paths.Count; i++)
+            {
+                int timer = 0;
+                foreach (Street street in paths[i].Streets)
+                {
+                    Intersection intersection = intersections.Find(t => t.Id == street.Ends);
+                    timer += street.Time;
+                    int min = intersection.StreetTime[street.Name][0];
+                    int max = intersection.StreetTime[street.Name][1];
+                    int interval = timer % intersection.GreenInterval;
+                    while (!checkIfInInterval(interval, min, max))
+                    {
+                        timer++;
+                        interval = timer % intersection.GreenInterval;
+                    }
+
+                }
+                timer += paths[i].DestinationTime;
+                if (timer <= D)
+                {
+                    score += F + D - timer;
+                }
+            }
+            return score;
+        }
+
+
+        static bool checkIfInInterval(int number, int min, int max)
+        {
+            return min <= number && number < max;
+        }
     }
+
+
 
     class Intersection
     {
@@ -178,6 +232,7 @@ namespace Traffic_Signaling
         public List<Street> Streets { get; set; }
         public int GreenInterval { get; set; }
         public List<int> GreenTimeForStreets { get; set; }
+        public Dictionary<string, int[]> StreetTime { get; set; }
     }
 
     class Street
@@ -194,6 +249,7 @@ namespace Traffic_Signaling
         public int NumberOfIntersections { get; set; }
         public List<Intersection> Intersections { get; set; }
         public List<Street> Streets { get; set; }
-        public string Destination { get; set; }
+        public string DestinationName { get; set; }
+        public int DestinationTime { get; set; }
     }
 }
