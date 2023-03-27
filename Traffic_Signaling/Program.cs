@@ -10,6 +10,7 @@ namespace Traffic_Signaling
 {
     class Program
     {
+        public static int NumberOfStops { get; set; } = 0;
         public static void Main(string[] args)
         {
             var input = File.ReadAllLines(Directory.GetCurrentDirectory() + "\\a_an_example.in.txt");
@@ -183,7 +184,8 @@ namespace Traffic_Signaling
             }
 
             int eval = EvaluationFunction(paths, usedIntersections, F, D);
-            Console.WriteLine($"The calculated evaluation function is: {eval.ToString("#,#")}");
+            Console.WriteLine($"The calculated evaluation function is: {eval.ToString("#,#")} and number of " +
+                $"total stop at traffic lights is {NumberOfStops}");
             //Console.WriteLine("Hello World!");
 
         }
@@ -203,6 +205,7 @@ namespace Traffic_Signaling
                     int interval = timer % intersection.GreenInterval;
                     while (!checkIfInInterval(interval, min, max))
                     {
+                        NumberOfStops++;
                         timer++;
                         interval = timer % intersection.GreenInterval;
                     }
