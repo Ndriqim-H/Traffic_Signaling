@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -14,7 +15,13 @@ namespace Traffic_Signaling
         public static int NumberOfStops { get; set; } = 0;
         public static void Main(string[] args)
         {
-            var input = File.ReadAllLines(Directory.GetCurrentDirectory() + "\\a_an_example.in.txt");
+            string inputFileName = "b_by_the_ocean";
+            if(args.Length > 0) {
+                inputFileName = args[0];
+            }
+            
+            var input = File.ReadAllLines(Directory.GetCurrentDirectory() 
+                + $"\\{inputFileName}.in.txt");
 
             // Parse input
             var parameters = input[0].Split(' ');
@@ -56,14 +63,14 @@ namespace Traffic_Signaling
             }
 
             //Create car paths
-            List<Path> paths = new();
+            List<Car> paths = new();
             for (int i = S + 1; i < V + S + 1; i++)
             {
                 var arr = input[i].Split(' ');
                 List<Street> streetsInPath = new();
                 //Get all the streets from the path except the last one, the last street is saved
                 //separately as the destination
-                for (int j = 1; j < arr.Length - 1; j++)
+                for (int j = 1; j < arr.Length; j++)
                 {
                     var street1 = streets.Where(t => t.Name == arr[j]).First();
                     streetsInPath.Add(new Street()
@@ -78,7 +85,7 @@ namespace Traffic_Signaling
                 }
 
                 var street = streets.Where(t => t.Name == arr[arr.Length - 1]).First();
-                paths.Add(new Path()
+                paths.Add(new Car()
                 {
                     Id = i - (S + 1),
                     NumberOfIntersections = int.Parse(arr[0]),
@@ -169,7 +176,7 @@ namespace Traffic_Signaling
                 }
                 else
                 {
-                    usedIntersections[i].GreenInterval = usedIntersections[i].Streets.Count;
+                    usedIntersections[i].GreenInterval = 2*usedIntersections[i].Streets.Count;
                     
                     usedIntersections[i].StreetTime = new();
                     int min = 0;
@@ -178,8 +185,10 @@ namespace Traffic_Signaling
                     {
                         var str = usedIntersections[i].Streets[j];
                         usedIntersections[i].StreetTime.Add(str.Name, new[] { min, max });
-                        min *= 2;
-                        max *= 2;
+                        min++;
+                        min++;
+                        max++;
+                        max++;
                     }
                 }
             }
@@ -187,32 +196,37 @@ namespace Traffic_Signaling
             int eval = EvaluationFunction(paths, usedIntersections, F, D);
             Console.WriteLine($"The calculated evaluation function is: {eval.ToString("#,#")} and number of " +
                 $"total stop at traffic lights is {NumberOfStops}");
+
+            WriteOutputFile($"output-{inputFileName}.txt", usedIntersections);
             //Console.WriteLine("Hello World!");
 
         }
 
-        static int EvaluationFunction(List<Path> paths, List<Intersection> intersections, int F, int D)
+        static int EvaluationFunction1(List<Car> paths, List<Intersection> intersections, int F, int D)
         {
             int score = 0;
             for (int i = 0; i < paths.Count; i++)
             {
                 int timer = 0;
-                foreach (Street street in paths[i].Streets)
+                for (int j = 0; j < paths[i].Streets.Count; j++)
                 {
+                    var street = paths[i].Streets[j];
                     Intersection intersection = intersections.Find(t => t.Id == street.Ends);
-                    timer += street.Time;
+                    if (j != 0)
+                        timer += street.Time;
                     int min = intersection.StreetTime[street.Name][0];
                     int max = intersection.StreetTime[street.Name][1];
                     int interval = timer % intersection.GreenInterval;
-                    while (!checkIfInInterval(interval, min, max))
+                    while (!CheckIfInInterval(interval, min, max))
                     {
                         NumberOfStops++;
                         timer++;
                         interval = timer % intersection.GreenInterval;
                     }
-
+                    if(j != 0)
+                        timer++;
                 }
-                timer += paths[i].DestinationTime;
+                //timer += paths[i].DestinationTime;
                 if (timer <= D)
                 {
                     score += F + D - timer;
@@ -221,11 +235,127 @@ namespace Traffic_Signaling
             return score;
         }
 
+        static int EvaluationFunction(List<Car> cars, List<Intersection> intersections, int F, int D)
+        {
+            //We initialize the score and a global simulation timer
+            int score = 0;
+            int timer = 0;
+            //While we are within the simulation time we continue the simulation.
+            //We are not completely sure if it should be "timer <= D" or "timer < D"
+            while (timer <= D) {
+                //We iterate through all the cars
+                for (int i = 0; i < cars.Count; i++)
+                {
+                    //If the car has already finished, we skip it
+                    if (cars[i].Finished)
+                        continue;
 
-        static bool checkIfInInterval(int number, int min, int max)
+                    //If the car is moving we check if it has reached the end of the street
+                    if (cars[i].Moving && timer == cars[i].T1Movement)
+                        cars[i].Moving = false;
+
+                    //If the car is still moving we skip it
+                    if (cars[i].Moving)
+                        continue;
+
+                    //Using the position we find the street the car is at
+                    int position = cars[i].Position;
+                    var street = cars[i].Streets[position];
+
+                    //Based on the end of the street we find the intersection and
+                    //check if the green light is on for the interval
+                    Intersection intersection = intersections.Find(t => t.Id == street.Ends);
+                    int min = intersection.StreetTime[street.Name][0];
+                    int max = intersection.StreetTime[street.Name][1];
+                    int interval = timer % intersection.GreenInterval;
+
+                    //If the light is green we proceed to check the queue and move if allowed.
+                    if (CheckIfInInterval(interval, min, max))
+                    {
+                        //We check to see if there is a queue at the intersection
+                        //If there is no queue at all we proceed
+                        if(!(street.Queue.Count == 0))
+                        {
+                            //If there is a queue we check if the current
+                            //car is at the front of the queue
+                            //If so, we dequeue it, if not we don't remove it and continue to
+                            //the next car.
+                            //Theoretically, it takes 1 second for the car to move up the queue if
+                            //the light is green, so if the car is not in the front another car will
+                            //move in the process and the timer will increment for the next one
+                            if (cars[i].Id == street.Queue.Peek())
+                                street.Queue.Dequeue();
+                            if (street.Queue.Contains(street.Id))
+                                continue;
+                        }
+                        
+                        //If the car sees the green light we increment its position and
+                        //calculate how much time it will take to reach the next intersection
+                        position++;
+                        cars[i].Position = position;
+                        Street nextStreet = cars[i].Streets[position];
+
+                        //If the next street is the destination, we calculate the score
+                        //and mark the car as finished
+                        if(nextStreet.Name == cars[i].DestinationName)
+                        {
+                            score += F + D - timer;
+                            cars[i].Finished = true;
+                            continue;
+                        }
+
+                        //interval = timer % intersection.GreenInterval;
+                        cars[i].Moving = true;
+                        cars[i].T0Movement = timer;
+                        cars[i].T1Movement = timer + nextStreet.Time;
+                    }
+                    //If the light is red we put the car into a queue
+                    //C# has made it easy for us since the street in the path(car) is also referenced
+                    //from the intersection so it makes no difference.
+                    else
+                    {
+                        //If the car is not in the queue we push it in.
+                        if (!street.Queue.Contains(cars[i].Id)) {
+                            street.Queue.Enqueue(cars[i].Id);
+                        }
+                    }
+                }
+
+                timer++;
+                
+            }
+            return score;
+        }
+        static bool CheckIfInInterval(int number, int min, int max)
         {
             return min <= number && number < max;
         }
+
+
+        static void WriteOutputFile(string outputFile, List<Intersection> intersections)
+        {
+            var outputLines = new List<string>
+            {
+                intersections.Count.ToString()
+            };
+
+            foreach (var intersectionSchedule in intersections)
+            {
+                var intersectionId = intersectionSchedule.Id;
+                var trafficLights = intersectionSchedule.StreetTime;
+
+                outputLines.Add(intersectionId.ToString());
+                outputLines.Add(trafficLights.Count.ToString());
+
+                foreach (var trafficLight in trafficLights)
+                {
+                    outputLines.Add($"{trafficLight.Key} {trafficLight.Value[1] - trafficLight.Value[0]}");
+                }
+            }
+
+            File.WriteAllLines(outputFile, outputLines);
+        }
+
     }
 
 
@@ -245,8 +375,9 @@ namespace Traffic_Signaling
         public int Ends { get; set; }
         public string Name { get; set; }
         public int Time { get; set; }
+        public Queue<int> Queue { get; set; } = new();
     }
-    class Path
+    class Car
     {
         public int Id { get; set; }
         public int NumberOfIntersections { get; set; }
@@ -254,5 +385,11 @@ namespace Traffic_Signaling
         public List<Street> Streets { get; set; }
         public string DestinationName { get; set; }
         public int DestinationTime { get; set; }
+        public int Position { get; set; } = 0;
+        public bool Finished { get; set; }
+        public bool Moving { get; set; }
+        public int T0Movement { get; set; }
+        public int T1Movement { get; set; }
+
     }
 }
