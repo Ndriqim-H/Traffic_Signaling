@@ -265,7 +265,7 @@ namespace Traffic_Signaling
                     //Based on the end of the street we find the intersection and
                     //check if the green light is on for the interval
                     Intersection intersection = intersections.Find(t => t.Id == street.Ends);
-                    int min = intersection.StreetTime[street.Name][0];
+                    int min = intersection.StreetTime[street.Name][0];//
                     int max = intersection.StreetTime[street.Name][1];
                     int interval = timer % intersection.GreenInterval;
 
@@ -323,9 +323,9 @@ namespace Traffic_Signaling
                     //from the intersection so it makes no difference.
                     else
                     {
-                        NumberOfStops++;
                         //If the car is not in the queue we push it in.
                         if (!street.Queue.Contains(cars[i].Id)) {
+                            NumberOfStops++;
                             street.Queue.Enqueue(cars[i].Id);
                         }
                     }
@@ -336,7 +336,7 @@ namespace Traffic_Signaling
             }
             return score;
         }
-        static bool CheckIfInInterval(int number, int min, int max)
+        static bool CheckIfInInterval(int number, int min, int max) //is number element of [min,max)
         {
             return min <= number && number < max;
         }
