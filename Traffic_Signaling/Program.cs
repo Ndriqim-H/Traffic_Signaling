@@ -70,7 +70,7 @@ namespace Traffic_Signaling
                 List<Street> streetsInPath = new();
                 //Get all the streets from the path except the last one, the last street is saved
                 //separately as the destination
-                for (int j = 1; j < arr.Length; j++)
+                for (int j = 1; j < arr.Length - 1; j++)
                 {
                     var street1 = streets.Where(t => t.Name == arr[j]).First();
                     streetsInPath.Add(new Street()
@@ -113,7 +113,7 @@ namespace Traffic_Signaling
             List<Intersection> usedIntersections = new();
             for (int i = 0; i < paths.Count; i++)
             {
-                var intersectionsInPaths = paths[i].Intersections.ToList();
+                List<Intersection> intersectionsInPaths = paths[i].Intersections;
                 for (int j = 0; j < intersectionsInPaths.Count; j++)
                 {
                     var usedInterSectionsIds = usedIntersections.Select(t => t.Id).ToList();
@@ -297,11 +297,7 @@ namespace Traffic_Signaling
                         //calculate how much time it will take to reach the next intersection
                         position++;
                         cars[i].Position = position;
-                        Street nextStreet = cars[i].Streets[position];
-
-                        //If the next street is the destination, we calculate the score
-                        //and mark the car as finished
-                        if(nextStreet.Name == cars[i].DestinationName)
+                        if(position == cars[i].Streets.Count)
                         {
                             cars[i].Finished = true;
                             int fullTime = D - (timer + cars[i].DestinationTime);
@@ -311,6 +307,11 @@ namespace Traffic_Signaling
                             score += F + fullTime;
                             continue;
                         }
+                        Street nextStreet = cars[i].Streets[position];
+
+                        //If the next street is the destination, we calculate the score
+                        //and mark the car as finished
+                        
 
                         //interval = timer % intersection.GreenInterval;
                         cars[i].Moving = true;
