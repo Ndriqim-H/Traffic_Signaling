@@ -15,13 +15,13 @@ namespace Traffic_Signaling
         public static int NumberOfStops { get; set; } = 0;
         public static void Main(string[] args)
         {
-            string inputFileName = "b_by_the_ocean";
+            string inputFileName = "a_an_example.in";
             if(args.Length > 0) {
                 inputFileName = args[0];
             }
             
             var input = File.ReadAllLines(Directory.GetCurrentDirectory() 
-                + $"\\{inputFileName}.in.txt");
+                + $"\\{inputFileName}.txt");
 
             // Parse input
             var parameters = input[0].Split(' ');
@@ -197,7 +197,7 @@ namespace Traffic_Signaling
             Console.WriteLine($"The calculated evaluation function is: {eval.ToString("#,#")} and number of " +
                 $"total stop at traffic lights is {NumberOfStops}");
 
-            WriteOutputFile($"output-{inputFileName}.txt", usedIntersections);
+            WriteOutputFile($"{inputFileName}.out.txt", usedIntersections);
             //Console.WriteLine("Hello World!");
 
         }
@@ -286,7 +286,11 @@ namespace Traffic_Signaling
                             if (cars[i].Id == street.Queue.Peek())
                                 street.Queue.Dequeue();
                             if (street.Queue.Contains(street.Id))
+                            {
+                                NumberOfStops++;
                                 continue;
+                            }
+                                
                         }
                         
                         //If the car sees the green light we increment its position and
@@ -299,8 +303,12 @@ namespace Traffic_Signaling
                         //and mark the car as finished
                         if(nextStreet.Name == cars[i].DestinationName)
                         {
-                            score += F + D - timer;
                             cars[i].Finished = true;
+                            int fullTime = D - (timer + cars[i].DestinationTime);
+                            if (fullTime < 0)
+                                continue;
+
+                            score += F + fullTime;
                             continue;
                         }
 
@@ -314,6 +322,7 @@ namespace Traffic_Signaling
                     //from the intersection so it makes no difference.
                     else
                     {
+                        NumberOfStops++;
                         //If the car is not in the queue we push it in.
                         if (!street.Queue.Contains(cars[i].Id)) {
                             street.Queue.Enqueue(cars[i].Id);
