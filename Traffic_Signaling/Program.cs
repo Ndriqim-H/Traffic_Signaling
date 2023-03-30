@@ -15,13 +15,12 @@ namespace Traffic_Signaling
         public static int NumberOfStops { get; set; } = 0;
         public static void Main(string[] args)
         {
-            string inputFileName = "a_an_example.in";
+            string inputFileName = "Traffic Signaling - Instanca fillestare - Prishtinë";
             if(args.Length > 0) {
                 inputFileName = args[0];
             }
             
-            var input = File.ReadAllLines(Directory.GetCurrentDirectory() 
-                + $"\\{inputFileName}.txt");
+            var input = File.ReadAllLines($@"..\..\..\Inputs\{inputFileName}.in.txt");
 
             // Parse input
             var parameters = input[0].Split(' ');
@@ -197,7 +196,7 @@ namespace Traffic_Signaling
             Console.WriteLine($"The calculated evaluation function is: {eval.ToString("#,#")} and number of " +
                 $"total stop at traffic lights is {NumberOfStops}");
 
-            WriteOutputFile($"{inputFileName}.out.txt", usedIntersections);
+            WriteOutputFile($@"../../../Outputs/{inputFileName}1.out.txt", usedIntersections);
             //Console.WriteLine("Hello World!");
 
         }
