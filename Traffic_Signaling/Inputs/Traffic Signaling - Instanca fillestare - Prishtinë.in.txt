@@ -1,0 +1,25 @@
+300 9 20 4 100
+0 1 FIEK-Rr.B 10	
+1 0 Rr.B-FIEK 10
+2 0 EULEX-FIEK 30
+0 4 FIEK-Qerimi 5
+4 0 Qerimi-FIEK 5
+0 3 FIEK-Menza 5
+3 0 Menza-FIEK 5
+1 2 Rr.B-EULEX 15
+2 1 EULEX-Rr.B 15
+4 1 Qerimi-Rr.B 15
+3 5 Menza-Katedralja 7
+5 3 Katedralja-Menza 7
+5 6 Katedralja-Santeja 5
+6 5 Santeja-Katedralja 5
+6 7 Santeja-Rilindja 12
+7 6 Rilindja-Santeja 12
+7 8 Rilindja-Qafa 18
+8 7 Qafa-Rilindja 18
+8 4 Qafa-Qerimi 240
+4 8 Qerimi-Qafa 240
+4 Qerimi-FIEK FIEK-Menza Menza-Katedralja Katedralja-Santeja
+5 EULEX-Rr.B Rr.B-FIEK FIEK-Qerimi Qerimi-Qafa Qafa-Rilindja
+4 Katedralja-Menza Menza-FIEK FIEK-Rr.B Rr.B-EULEX
+4 Katedralja-Menza Menza-FIEK FIEK-Qerimi Qerimi-Qafa

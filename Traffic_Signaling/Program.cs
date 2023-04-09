@@ -15,13 +15,12 @@ namespace Traffic_Signaling
         public static int NumberOfStops { get; set; } = 0;
         public static void Main(string[] args)
         {
-            string inputFileName = "a_an_example.in";
+            string inputFileName = "e_etoile";
             if(args.Length > 0) {
                 inputFileName = args[0];
             }
             
-            var input = File.ReadAllLines(Directory.GetCurrentDirectory() 
-                + $"\\{inputFileName}.txt");
+            var input = File.ReadAllLines($@"..\..\..\Inputs\{inputFileName}.in.txt");
 
             // Parse input
             var parameters = input[0].Split(' ');
@@ -163,6 +162,7 @@ namespace Traffic_Signaling
             //Here, however, since it's the initial solution, we have given the interval equal to the
             //number of streets going inwards, making it so every car goes one by one into the intersection.
 
+            //usedIntersections = usedIntersections.OrderBy(t => Guid.NewGuid()).ToList();
             for (int i = 0; i < usedIntersections.Count; i++)
             {
                 if (usedIntersections[i].Streets.Count == 1)
@@ -180,10 +180,12 @@ namespace Traffic_Signaling
                     
                     usedIntersections[i].StreetTime = new();
                     int min = 0;
-                    int max = 2;
-                    for (int j = 0; j < usedIntersections[i].Streets.Count; j++)
+                    int max = 2;//[0,2)
+                    var usedStreets = usedIntersections[i].Streets.OrderBy(t => Guid.NewGuid()).ToList();//Randmoness
+
+                    for (int j = 0; j < usedStreets.Count; j++)
                     {
-                        var str = usedIntersections[i].Streets[j];
+                        var str = usedStreets[j];
                         usedIntersections[i].StreetTime.Add(str.Name, new[] { min, max });
                         min++;
                         min++;
@@ -198,41 +200,9 @@ namespace Traffic_Signaling
                 $"total stop at traffic lights is {NumberOfStops}");
 
             //WriteOutputFile($"{inputFileName}.out.txt", usedIntersections);
+            //WriteOutputFile($@"../../../Outputs/{inputFileName}2.out.txt", usedIntersections);
             //Console.WriteLine("Hello World!");
 
-        }
-
-        static int EvaluationFunction1(List<Car> paths, List<Intersection> intersections, int F, int D)
-        {
-            int score = 0;
-            for (int i = 0; i < paths.Count; i++)
-            {
-                int timer = 0;
-                for (int j = 0; j < paths[i].Streets.Count; j++)
-                {
-                    var street = paths[i].Streets[j];
-                    Intersection intersection = intersections.Find(t => t.Id == street.Ends);
-                    if (j != 0)
-                        timer += street.Time;
-                    int min = intersection.StreetTime[street.Name][0];
-                    int max = intersection.StreetTime[street.Name][1];
-                    int interval = timer % intersection.GreenInterval;
-                    while (!CheckIfInInterval(interval, min, max))
-                    {
-                        NumberOfStops++;
-                        timer++;
-                        interval = timer % intersection.GreenInterval;
-                    }
-                    if(j != 0)
-                        timer++;
-                }
-                //timer += paths[i].DestinationTime;
-                if (timer <= D)
-                {
-                    score += F + D - timer;
-                }
-            }
-            return score;
         }
 
         static int EvaluationFunction(List<Car> cars, List<Intersection> intersections, int F, int D)
@@ -262,6 +232,7 @@ namespace Traffic_Signaling
                     //Using the position we find the street the car is at
                     int position = cars[i].Position;
                     var street = cars[i].Streets[position];
+                    
 
                     //Based on the end of the street we find the intersection and
                     //check if the green light is on for the interval
@@ -316,7 +287,6 @@ namespace Traffic_Signaling
 
                         //interval = timer % intersection.GreenInterval;
                         cars[i].Moving = true;
-                        cars[i].T0Movement = timer;
                         cars[i].T1Movement = timer + nextStreet.Time;
                     }
                     //If the light is red we put the car into a queue
@@ -403,7 +373,6 @@ namespace Traffic_Signaling
         public int Position { get; set; } = 0;
         public bool Finished { get; set; }
         public bool Moving { get; set; }
-        public int T0Movement { get; set; }
         public int T1Movement { get; set; }
 
     }
