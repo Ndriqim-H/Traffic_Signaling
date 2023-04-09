@@ -197,7 +197,7 @@ namespace Traffic_Signaling
             Console.WriteLine($"The calculated evaluation function is: {eval.ToString("#,#")} and number of " +
                 $"total stop at traffic lights is {NumberOfStops}");
 
-            WriteOutputFile($"{inputFileName}.out.txt", usedIntersections);
+            //WriteOutputFile($"{inputFileName}.out.txt", usedIntersections);
             //Console.WriteLine("Hello World!");
 
         }
@@ -243,6 +243,7 @@ namespace Traffic_Signaling
             //While we are within the simulation time we continue the simulation.
             //We are not completely sure if it should be "timer <= D" or "timer < D"
             while (timer <= D) {
+                List<Street> streetsToDequeue = new();
                 //We iterate through all the cars
                 for (int i = 0; i < cars.Count; i++)
                 {
@@ -284,8 +285,8 @@ namespace Traffic_Signaling
                             //the light is green, so if the car is not in the front another car will
                             //move in the process and the timer will increment for the next one
                             if (cars[i].Id == street.Queue.Peek())
-                                street.Queue.Dequeue();
-                            if (street.Queue.Contains(street.Id))
+                                streetsToDequeue.Add(street);
+                            else //if(street.Queue.Contains(street.Id))
                             {
                                 NumberOfStops++;
                                 continue;
@@ -332,6 +333,10 @@ namespace Traffic_Signaling
                 }
 
                 timer++;
+                for (int i = 0; i < streetsToDequeue.Count; i++)
+                {
+                    streetsToDequeue[i].Queue.Dequeue();
+                }
                 
             }
             return score;
