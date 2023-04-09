@@ -15,7 +15,7 @@ namespace Traffic_Signaling
         public static int NumberOfStops { get; set; } = 0;
         public static void Main(string[] args)
         {
-            string inputFileName = "e_etoile";
+            string inputFileName = "a_an_example";
             if(args.Length > 0) {
                 inputFileName = args[0];
             }
@@ -194,12 +194,19 @@ namespace Traffic_Signaling
                     }
                 }
             }
+            
+            //For testing purposes we made the output a tuplo of the list and the index of
+            //the element that was changed
+            var test = SwitchRandomValuesOperator(usedIntersections);
+            var t1 = usedIntersections[test.Item2];
+            var t2 = test.Item1[test.Item2];
 
             int eval = EvaluationFunction(paths, usedIntersections, F, D);
             Console.WriteLine($"The calculated evaluation function is: {eval.ToString("#,#")} and number of " +
                 $"total stop at traffic lights is {NumberOfStops}");
 
-            //WriteOutputFile($"{inputFileName}.out.txt", usedIntersections);
+            WriteOutputFile($"{inputFileName}.out123.txt", usedIntersections);
+            
             //WriteOutputFile($@"../../../Outputs/{inputFileName}2.out.txt", usedIntersections);
             //Console.WriteLine("Hello World!");
 
@@ -332,7 +339,8 @@ namespace Traffic_Signaling
                 outputLines.Add(intersectionId.ToString());
                 outputLines.Add(trafficLights.Count.ToString());
 
-                foreach (var trafficLight in trafficLights)
+                //We write the streets based on the interval that is green
+                foreach (var trafficLight in trafficLights.OrderBy(t => t.Value[0]))
                 {
                     outputLines.Add($"{trafficLight.Key} {trafficLight.Value[1] - trafficLight.Value[0]}");
                 }
@@ -341,6 +349,66 @@ namespace Traffic_Signaling
             File.WriteAllLines(outputFile, outputLines);
         }
 
+        //This operator finds a random intersection that has more than one incoming street and switches 
+        //the green time intervals between 2 random streets.
+        //This is a simple operator and it doesn't change the period of the signaling.
+        static Tuple<List<Intersection>,int> SwitchRandomValuesOperator(List<Intersection> intersections)
+        {
+            //We first deep copy the list, since we the algorithm may still select the old one.
+            List<Intersection> resultIntersections = intersections.ConvertAll(intersection => new Intersection
+            {
+                GreenInterval = intersection.GreenInterval,
+                Id = intersection.Id,
+                Streets = intersection.Streets.ToList(), // create a new list with a copy of Streets
+                StreetTime = new Dictionary<string, int[]>(intersection.StreetTime) // create a new dictionary with a copy of StreetTime
+            });
+
+            //Select a random element from the new list
+            int index = new Random().Next(resultIntersections.Count);
+            Intersection resultIntersection = resultIntersections[index];
+            
+            //Make sure that the intersection has more than 1 incoming street
+            while (resultIntersection.StreetTime.Count == 1)
+            {
+                index = new Random().Next(resultIntersections.Count);
+                resultIntersection = resultIntersections[index];
+            }
+
+            //If the intersection has 2 streets we directly switch them
+            //This is done to optimize the code so that we don't unnecessarily repeat new elements
+            if (resultIntersection.StreetTime.Count == 2)
+            {
+                string key1 = resultIntersection.StreetTime.Keys.First();
+                string key2 = resultIntersection.StreetTime.Keys.Last();
+                int[] vals1 = resultIntersection.StreetTime[key1];
+                resultIntersection.StreetTime[key1] = resultIntersection.StreetTime[key2];
+                resultIntersection.StreetTime[key2] = vals1;
+
+                resultIntersections[index] = resultIntersection;
+                
+            }
+            //If the intersection has more than 2 incoming streets,
+            //then we pick 2 randomly and switch their green schedules.
+            else
+            {
+                int valIndex1 = new Random().Next(resultIntersection.StreetTime.Keys.Count);
+                int valIndex2;
+                do
+                {
+                    valIndex2 = new Random().Next(resultIntersection.StreetTime.Keys.Count);
+                } while (valIndex2 == valIndex1);
+
+                string key1 = resultIntersection.StreetTime.Keys.ElementAt(valIndex1);
+                string key2 = resultIntersection.StreetTime.Keys.ElementAt(valIndex2);
+                int[] vals1 = resultIntersection.StreetTime[key1];
+                resultIntersection.StreetTime[key1] = resultIntersection.StreetTime[key2];
+                resultIntersection.StreetTime[key2] = vals1;
+
+                resultIntersections[index] = resultIntersection;
+            }
+
+            return Tuple.Create(resultIntersections, index);
+        }
     }
 
 
