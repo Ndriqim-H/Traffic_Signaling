@@ -206,7 +206,42 @@ namespace Traffic_Signaling
                 $"total stop at traffic lights is {NumberOfStops}");
 
             WriteOutputFile($"{inputFileName}.out123.txt", usedIntersections);
-            
+
+            //start simulated annealing 
+            var initialScore = eval;
+
+            SimulatedAnnealing simulatedAnnealing = new SimulatedAnnealing();
+
+            //find a way to get these dynamically
+            simulatedAnnealing._initialTemperature = 1000.0;
+            simulatedAnnealing._coolingRate = 0.003;
+
+            //simulated annealing loop
+            while (simulatedAnnealing._initialTemperature > 1.0)
+            {
+                // generate new green time schedules for the cars 
+                // randomness of the time schedule to be added
+
+                // compute the score of the new solution above
+
+                var newScore = EvaluationFunction(paths, usedIntersections, F, D); // atm the same solution is used for testing
+
+
+                //determine if the newScore is better than the initialScore
+                if (newScore > initialScore || simulatedAnnealing._random.NextDouble() < Math.Exp((newScore -initialScore)/simulatedAnnealing._initialTemperature))
+                {
+                    initialScore = newScore;
+                    //set new schedules ... 
+                }
+
+                simulatedAnnealing._initialTemperature *= 1 - simulatedAnnealing._coolingRate;
+
+                
+            }
+
+            simulatedAnnealing._finalTemperature = simulatedAnnealing._initialTemperature;
+
+
             //WriteOutputFile($@"../../../Outputs/{inputFileName}2.out.txt", usedIntersections);
             //Console.WriteLine("Hello World!");
 
@@ -443,5 +478,14 @@ namespace Traffic_Signaling
         public bool Moving { get; set; }
         public int T1Movement { get; set; }
 
+    }
+    class SimulatedAnnealing
+    {
+        public Random _random { get; set; } = new Random();
+        public double _initialTemperature { get; set; }
+        public double _finalTemperature { get; set; }
+        public int _maxIterations { get; set; }
+
+        public double _coolingRate { get; set; }
     }
 }
