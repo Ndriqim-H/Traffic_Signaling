@@ -15,11 +15,12 @@ namespace Traffic_Signaling
         public static int NumberOfStops { get; set; } = 0;
         public static void Main(string[] args)
         {
-            string inputFileName = "a_an_example";
-            if(args.Length > 0) {
+            string inputFileName = "c_checkmate";
+            if (args.Length > 0)
+            {
                 inputFileName = args[0];
             }
-            
+
             var input = File.ReadAllLines($@"..\..\..\Inputs\{inputFileName}.in.txt");
 
             // Parse input
@@ -176,8 +177,8 @@ namespace Traffic_Signaling
                 }
                 else
                 {
-                    usedIntersections[i].GreenInterval = 2*usedIntersections[i].Streets.Count;
-                    
+                    usedIntersections[i].GreenInterval = 2 * usedIntersections[i].Streets.Count;
+
                     usedIntersections[i].StreetTime = new();
                     int min = 0;
                     int max = 2;//[0,2)
@@ -194,67 +195,56 @@ namespace Traffic_Signaling
                     }
                 }
             }
-            
+
             //For testing purposes we made the output a tuplo of the list and the index of
             //the element that was changed
-            var test = SwitchRandomValuesOperator(usedIntersections);
-            var t1 = usedIntersections[test.Item2];
-            var t2 = test.Item1[test.Item2];
 
-            int eval = EvaluationFunction(paths, usedIntersections, F, D);
-            Console.WriteLine($"The calculated evaluation function is: {eval.ToString("#,#")} and number of " +
-                $"total stop at traffic lights is {NumberOfStops}");
-
-            WriteOutputFile($"{inputFileName}.out123.txt", usedIntersections);
-
-            //start simulated annealing 
-            var initialScore = eval;
-
-            SimulatedAnnealing simulatedAnnealing = new SimulatedAnnealing();
-
-            //find a way to get these dynamically
-            simulatedAnnealing._initialTemperature = 1000.0;
-            simulatedAnnealing._coolingRate = 0.003;
-
-            //simulated annealing loop
-            while (simulatedAnnealing._initialTemperature > 1.0)
+            State state = new State()
             {
-                // generate new green time schedules for the cars 
-                // randomness of the time schedule to be added
+                Intersections = usedIntersections,
+            };
+            var test = SwitchRandomValuesOperator(state.Intersections);
+            //var t1 = usedIntersections[test.Item2];
+            //var t2 = test.Item1[test.Item2];
 
-                // compute the score of the new solution above
+            State solution = SimulatedAnnealing(state, paths, F, D);
 
-                var newScore = EvaluationFunction(paths, usedIntersections, F, D); // atm the same solution is used for testing
+            int eval = EvaluationFunction(paths, state, F, D);
+            int solEval = EvaluationFunction(paths, solution, F, D);
+            Console.WriteLine($"The calculated evaluation function for initial solution is: {eval:#,#}\n" +
+                $"The best solution found has the score: {solEval:#,#}");
 
-
-                //determine if the newScore is better than the initialScore
-                if (newScore > initialScore || simulatedAnnealing._random.NextDouble() < Math.Exp((newScore -initialScore)/simulatedAnnealing._initialTemperature))
-                {
-                    initialScore = newScore;
-                    //set new schedules ... 
-                }
-
-                simulatedAnnealing._initialTemperature *= 1 - simulatedAnnealing._coolingRate;
-
-                
-            }
-
-            simulatedAnnealing._finalTemperature = simulatedAnnealing._initialTemperature;
-
+            //WriteOutputFile($"{inputFileName}.out123.txt", usedIntersections);
 
             //WriteOutputFile($@"../../../Outputs/{inputFileName}2.out.txt", usedIntersections);
             //Console.WriteLine("Hello World!");
 
         }
 
-        static int EvaluationFunction(List<Car> cars, List<Intersection> intersections, int F, int D)
+        static int EvaluationFunction(List<Car> cars1, State state, int F, int D)
         {
+            List<Car> cars = cars1.ConvertAll(t => new Car()
+            {
+                DestinationName = t.DestinationName,
+                DestinationTime = t.DestinationTime,
+                Finished = false,
+                Moving = false,
+                Id = t.Id,
+                Intersections = t.Intersections,
+                NumberOfIntersections = t.NumberOfIntersections,
+                Position = t.Position,
+                Streets = t.Streets,
+                T1Movement = t.T1Movement
+            });
+            List<Intersection> intersections = state.Intersections;
+
             //We initialize the score and a global simulation timer
             int score = 0;
             int timer = 0;
             //While we are within the simulation time we continue the simulation.
             //We are not completely sure if it should be "timer <= D" or "timer < D"
-            while (timer <= D) {
+            while (timer <= D)
+            {
                 List<Street> streetsToDequeue = new();
                 //We iterate through all the cars
                 for (int i = 0; i < cars.Count; i++)
@@ -274,7 +264,6 @@ namespace Traffic_Signaling
                     //Using the position we find the street the car is at
                     int position = cars[i].Position;
                     var street = cars[i].Streets[position];
-                    
 
                     //Based on the end of the street we find the intersection and
                     //check if the green light is on for the interval
@@ -288,7 +277,7 @@ namespace Traffic_Signaling
                     {
                         //We check to see if there is a queue at the intersection
                         //If there is no queue at all we proceed
-                        if(!(street.Queue.Count == 0))
+                        if (!(street.Queue.Count == 0))
                         {
                             //If there is a queue we check if the current
                             //car is at the front of the queue
@@ -304,14 +293,14 @@ namespace Traffic_Signaling
                                 NumberOfStops++;
                                 continue;
                             }
-                                
+
                         }
-                        
+
                         //If the car sees the green light we increment its position and
                         //calculate how much time it will take to reach the next intersection
                         position++;
                         cars[i].Position = position;
-                        if(position == cars[i].Streets.Count)
+                        if (position == cars[i].Streets.Count)
                         {
                             cars[i].Finished = true;
                             int fullTime = D - (timer + cars[i].DestinationTime);
@@ -325,7 +314,7 @@ namespace Traffic_Signaling
 
                         //If the next street is the destination, we calculate the score
                         //and mark the car as finished
-                        
+
 
                         //interval = timer % intersection.GreenInterval;
                         cars[i].Moving = true;
@@ -337,7 +326,8 @@ namespace Traffic_Signaling
                     else
                     {
                         //If the car is not in the queue we push it in.
-                        if (!street.Queue.Contains(cars[i].Id)) {
+                        if (!street.Queue.Contains(cars[i].Id))
+                        {
                             NumberOfStops++;
                             street.Queue.Enqueue(cars[i].Id);
                         }
@@ -349,7 +339,7 @@ namespace Traffic_Signaling
                 {
                     streetsToDequeue[i].Queue.Dequeue();
                 }
-                
+
             }
             return score;
         }
@@ -387,7 +377,7 @@ namespace Traffic_Signaling
         //This operator finds a random intersection that has more than one incoming street and switches 
         //the green time intervals between 2 random streets.
         //This is a simple operator and it doesn't change the period of the signaling.
-        static Tuple<List<Intersection>,int> SwitchRandomValuesOperator(List<Intersection> intersections)
+        static Tuple<List<Intersection>, int> SwitchRandomValuesOperator(List<Intersection> intersections)
         {
             //We first deep copy the list, since we the algorithm may still select the old one.
             List<Intersection> resultIntersections = intersections.ConvertAll(intersection => new Intersection
@@ -401,7 +391,7 @@ namespace Traffic_Signaling
             //Select a random element from the new list
             int index = new Random().Next(resultIntersections.Count);
             Intersection resultIntersection = resultIntersections[index];
-            
+
             //Make sure that the intersection has more than 1 incoming street
             while (resultIntersection.StreetTime.Count == 1)
             {
@@ -420,7 +410,7 @@ namespace Traffic_Signaling
                 resultIntersection.StreetTime[key2] = vals1;
 
                 resultIntersections[index] = resultIntersection;
-                
+
             }
             //If the intersection has more than 2 incoming streets,
             //then we pick 2 randomly and switch their green schedules.
@@ -444,6 +434,70 @@ namespace Traffic_Signaling
 
             return Tuple.Create(resultIntersections, index);
         }
+
+        public static State SimulatedAnnealing(State state, List<Car> cars, int F, int D, double T = 100000, double CoolingRate = 0.9, int maxIterations = 10000)
+        {
+            Random random = new Random();
+            State currentSolution = Clone(state);
+            State bestSolution = Clone(state);
+            int currentEnergy = EvaluationFunction(cars, state, F, D);
+            int bestEnergy = currentEnergy;
+            double temperature = T;
+            int iterations = maxIterations;
+
+            while (T > 0 && iterations > 0)
+            {
+                State newSolution = new()
+                {
+                    Intersections = SwitchRandomValuesOperator(currentSolution.Intersections).Item1
+                };
+                int newEnergy = EvaluationFunction(cars, newSolution, F, D);
+                if (newEnergy > currentEnergy)
+                {
+                    currentSolution = newSolution;
+                    currentEnergy = newEnergy;
+
+                    if (newEnergy > bestEnergy)
+                    {
+                        bestSolution = newSolution;
+                        bestEnergy = newEnergy;
+                    }
+                }
+                else
+                {
+                    double acceptanceProbability = Math.Exp(-Math.Abs(newEnergy - currentEnergy) / T);
+                    if (random.NextDouble() < acceptanceProbability)
+                    {
+                        currentSolution = newSolution;
+                        currentEnergy = newEnergy;
+                    }
+                }
+                T *= CoolingRate;
+                if (T <= 0.0005)
+                    T = 0;
+                iterations--;
+            }
+            return bestSolution;
+        }
+
+        public static State Clone(State state)
+        {
+
+            List<Intersection> resultIntersections = state.Intersections.ConvertAll(intersection => new Intersection
+            {
+                GreenInterval = intersection.GreenInterval,
+                Id = intersection.Id,
+                Streets = intersection.Streets.ToList(), // create a new list with a copy of Streets
+                StreetTime = new Dictionary<string, int[]>(intersection.StreetTime) // create a new dictionary with a copy of StreetTime
+            });
+            State newState = new State()
+            {
+                Intersections = resultIntersections,
+            };
+
+            return newState;
+        }
+
     }
 
 
@@ -479,13 +533,11 @@ namespace Traffic_Signaling
         public int T1Movement { get; set; }
 
     }
-    class SimulatedAnnealing
-    {
-        public Random _random { get; set; } = new Random();
-        public double _initialTemperature { get; set; }
-        public double _finalTemperature { get; set; }
-        public int _maxIterations { get; set; }
 
-        public double _coolingRate { get; set; }
+    class State
+    {
+        public List<Intersection> Intersections { get; set; }
+
+
     }
 }
