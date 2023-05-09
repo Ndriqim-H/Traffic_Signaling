@@ -15,10 +15,19 @@ namespace Traffic_Signaling
         public static int NumberOfStops { get; set; } = 0;
         public static void Main(string[] args)
         {
-            string inputFileName = "c_checkmate";
+            string inputFileName = "b_by_the_ocean";
+            string outputFileName = inputFileName;
+            int temperature = 1000;
+            int maxIterations = 10000;
+            double coolingRate = 0.9;
+
             if (args.Length > 0)
             {
                 inputFileName = args[0];
+                outputFileName = args[1];
+                temperature = int.Parse(args[2]);
+                maxIterations = int.Parse(args[3]);
+                coolingRate = double.Parse(args[4]);
             }
 
             var input = File.ReadAllLines($@"..\..\..\Inputs\{inputFileName}.in.txt");
@@ -152,7 +161,7 @@ namespace Traffic_Signaling
 
                 }
             }
-
+            x = usedIntersections.Any(t => t.Id == 1568);
             //Now there are 3 main scenarioes for each intersection:
             // 1. An intersection is never used by any car,
             //those have been removed when the "usedIntersections" list was being filled
@@ -203,6 +212,7 @@ namespace Traffic_Signaling
             {
                 Intersections = usedIntersections,
             };
+
             var test = SwitchRandomValuesOperator(state.Intersections);
             //var t1 = usedIntersections[test.Item2];
             //var t2 = test.Item1[test.Item2];
@@ -210,6 +220,7 @@ namespace Traffic_Signaling
             State solution = SimulatedAnnealing(state, paths, F, D);
 
             int eval = EvaluationFunction(paths, state, F, D);
+            int delta = DeltaFunction(paths, state, F, D, 0);
             int solEval = EvaluationFunction(paths, solution, F, D);
             Console.WriteLine($"The calculated evaluation function for initial solution is: {eval:#,#}\n" +
                 $"The best solution found has the score: {solEval:#,#}");
@@ -232,9 +243,10 @@ namespace Traffic_Signaling
                 Id = t.Id,
                 Intersections = t.Intersections,
                 NumberOfIntersections = t.NumberOfIntersections,
-                Position = t.Position,
+                Position = 0,
                 Streets = t.Streets,
-                T1Movement = t.T1Movement
+                T1Movement = t.T1Movement,
+                Score = t.Score,
             });
             List<Intersection> intersections = state.Intersections;
 
@@ -308,6 +320,8 @@ namespace Traffic_Signaling
                                 continue;
 
                             score += F + fullTime;
+                            cars1[i].Score = F + fullTime;
+
                             continue;
                         }
                         Street nextStreet = cars[i].Streets[position];
@@ -343,6 +357,142 @@ namespace Traffic_Signaling
             }
             return score;
         }
+
+        static int DeltaFunction(List<Car> cars, State state, int F, int D, int InterSectionId)
+        {
+            int delta = 0;
+            List<int> carsNotInIntersectionIds = cars.Where(t => !t.Intersections.Select(x => x.Id)
+            .Contains(InterSectionId)).Select(t=>t.Id).ToList();
+            List<Car> carsNotInIntersection = cars.Where(t => carsNotInIntersectionIds.Contains(t.Id)).ToList();
+            cars = cars.Where(t => !carsNotInIntersectionIds.Contains(t.Id)).ToList();
+            
+            for (int i = 0; i < cars.Count; i++)
+            {
+                Car car = cars[i];
+                car.Finished = false;
+                car.Moving = false;
+                car.Position = 0;
+            }
+
+            //cars = cars.Where(t => t.Intersections.Select(x=>x.Id).Contains(InterSectionId)).ToList();
+            List<Intersection> intersections = state.Intersections;
+
+            //We initialize the score and a global simulation timer
+            int score = 0;
+            int timer = 0;
+            //While we are within the simulation time we continue the simulation.
+            //We are not completely sure if it should be "timer <= D" or "timer < D"
+            while (timer <= D)
+            {
+                List<Street> streetsToDequeue = new();
+                //We iterate through all the cars
+                for (int i = 0; i < cars.Count; i++)
+                {
+                    Car car = cars[i];
+                    //If the car has already finished, we skip it
+                    if (car.Finished)
+                        continue;
+
+                    //If the car is moving we check if it has reached the end of the street
+                    if (car.Moving && timer == car.T1Movement)
+                        car.Moving = false;
+
+                    //If the car is still moving we skip it
+                    if (car.Moving)
+                        continue;
+
+                    //Using the position we find the street the car is at
+                    int position = car.Position;
+                    var street = car.Streets[position];
+
+                    //Based on the end of the street we find the intersection and
+                    //check if the green light is on for the interval
+                    Intersection intersection = intersections.Find(t => t.Id == street.Ends);
+                    int min = intersection.StreetTime[street.Name][0];//
+                    int max = intersection.StreetTime[street.Name][1];
+                    int interval = timer % intersection.GreenInterval;
+
+                    //If the light is green we proceed to check the queue and move if allowed.
+                    if (CheckIfInInterval(interval, min, max))
+                    {
+                        //We check to see if there is a queue at the intersection
+                        //If there is no queue at all we proceed
+                        if (!(street.Queue.Count == 0))
+                        {
+                            //If there is a queue we check if the current
+                            //car is at the front of the queue
+                            //If so, we dequeue it, if not we don't remove it and continue to
+                            //the next car.
+                            //Theoretically, it takes 1 second for the car to move up the queue if
+                            //the light is green, so if the car is not in the front another car will
+                            //move in the process and the timer will increment for the next one
+                            if (car.Id == street.Queue.Peek())
+                                streetsToDequeue.Add(street);
+                            else //if(street.Queue.Contains(street.Id))
+                            {
+                                NumberOfStops++;
+                                continue;
+                            }
+
+                        }
+
+                        //If the car sees the green light we increment its position and
+                        //calculate how much time it will take to reach the next intersection
+                        position++;
+                        car.Position = position;
+                        if (position == car.Streets.Count)
+                        {
+                            car.Finished = true;
+                            int fullTime = D - (timer + car.DestinationTime);
+                            if (fullTime < 0)
+                                continue;
+
+                            
+                            score += F + fullTime;
+                            car.Score = F + fullTime;
+
+                            continue;
+                        }
+                        Street nextStreet = car.Streets[position];
+
+                        //If the next street is the destination, we calculate the score
+                        //and mark the car as finished
+
+
+                        //interval = timer % intersection.GreenInterval;
+                        car.Moving = true;
+                        car.T1Movement = timer + nextStreet.Time;
+                    }
+                    //If the light is red we put the car into a queue
+                    //C# has made it easy for us since the street in the path(car) is also referenced
+                    //from the intersection so it makes no difference.
+                    else
+                    {
+                        //If the car is not in the queue we push it in.
+                        if (!street.Queue.Contains(car.Id))
+                        {
+                            NumberOfStops++;
+                            street.Queue.Enqueue(car.Id);
+                        }
+                    }
+                }
+
+                timer++;
+                for (int i = 0; i < streetsToDequeue.Count; i++)
+                {
+                    streetsToDequeue[i].Queue.Dequeue();
+                }
+
+            }
+
+            //Calculate the delta function as the sum of the cars that use
+            //the intersection and those that don't.
+            delta += carsNotInIntersection.Sum(t => t.Score) + cars.Sum(t=>t.Score);
+
+            return delta;
+        }
+
+
         static bool CheckIfInInterval(int number, int min, int max) //is number element of [min,max)
         {
             return min <= number && number < max;
@@ -432,7 +582,7 @@ namespace Traffic_Signaling
                 resultIntersections[index] = resultIntersection;
             }
 
-            return Tuple.Create(resultIntersections, index);
+            return Tuple.Create(resultIntersections, resultIntersection.Id);
         }
 
         public static State SimulatedAnnealing(State state, List<Car> cars, int F, int D, double T = 100000, double CoolingRate = 0.9, int maxIterations = 10000)
@@ -447,11 +597,13 @@ namespace Traffic_Signaling
 
             while (T > 0 && iterations > 0)
             {
+                var op = SwitchRandomValuesOperator(currentSolution.Intersections);
                 State newSolution = new()
                 {
-                    Intersections = SwitchRandomValuesOperator(currentSolution.Intersections).Item1
+                    Intersections = op.Item1
                 };
-                int newEnergy = EvaluationFunction(cars, newSolution, F, D);
+                int newEnergy = DeltaFunction(cars, newSolution, F, D, op.Item2);
+                
                 if (newEnergy > currentEnergy)
                 {
                     currentSolution = newSolution;
@@ -531,6 +683,7 @@ namespace Traffic_Signaling
         public bool Finished { get; set; }
         public bool Moving { get; set; }
         public int T1Movement { get; set; }
+        public int Score { get; set; }
 
     }
 
