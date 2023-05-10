@@ -33,20 +33,13 @@ namespace Traffic_Signaling
 
         public static void Main(string[] args)
         {
-            string inputFileName = "b_by_the_ocean";
-            string outputFileName = inputFileName;
-            int temperature = 1000;
-            int maxIterations = 10000;
-            double coolingRate = 0.9;
+            string inputFileName = "";
+            string outputFileName = "";
+            int temperature = 0;
+            int maxIterations = 0;
+            double coolingRate = 0;
 
-            if(args.Length == 0)
-            {
-                Console.WriteLine("No arguments provided.");
-                DisplayUsage();
-                return;
-            }
-
-            if (args.Length > 0)
+            if (args.Length > 0) //From command-line
             {
                 try
                 {
@@ -83,7 +76,7 @@ namespace Traffic_Signaling
                 if(string.IsNullOrEmpty(inputFileName) || string.IsNullOrEmpty(outputFileName)
                     || temperature <= 0 || maxIterations <= 0 || coolingRate <= 0)
                 {
-                    Console.WriteLine("Required.");
+                    Console.WriteLine("Fill in the required parameters.");
                     Console.WriteLine(inputFileName);
                     Console.WriteLine(outputFileName);
                     Console.WriteLine(temperature);
@@ -93,8 +86,17 @@ namespace Traffic_Signaling
                     return;
                 }
             }
+            else
+            {
+                inputFileName = "b_by_the_ocean";
+                outputFileName = inputFileName;
+                temperature = 1000;
+                maxIterations = 10000;
+                coolingRate = 0.9;
+            }
 
-            var projectDirectory = Directory.GetCurrentDirectory();
+            string projectDirectory = "";
+            projectDirectory = Directory.GetCurrentDirectory();
             projectDirectory += "\\Inputs\\";
             Console.WriteLine(projectDirectory);
 
