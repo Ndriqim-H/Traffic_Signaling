@@ -13,23 +13,21 @@ namespace Traffic_Signaling
 {
     class Program
     {
-
-        //A statistic on how much time was spent waiting a red light for every car.
-        public static int NumberOfStops { get; set; } = 0;
         static void DisplayUsage()
         {
+            Console.WriteLine();
             Console.WriteLine("Usage: dotnet run -i <input filename> -o <output filename> -t <SA temperature> -mi <SA max iterations> -cr <cooling rate>");
             Console.WriteLine("Parameters:");
             Console.WriteLine("  -i, --input filename     Specifies the input filename parameter (required)");
             Console.WriteLine("  -o, --output filename    Specifies the output filename parameter (required)");
-            Console.WriteLine("  -t, --temperature        Specifies the temperature(integer) parameter for simulated annealing algorithm (required)");
-            Console.WriteLine("  -mi, --max iterations    Specifies the max iterations(integer) parameter for simulated annealing algorithm (required)");
-            Console.WriteLine("  -cr, --cooling rate      Specifies the cooling rate(double) parameter for simulated annealing algorithm (required)");
+            Console.WriteLine("  -t, --temperature        Specifies the temperature(integer) positive value parameter for simulated annealing algorithm (required)");
+            Console.WriteLine("  -mi, --max iterations    Specifies the max iterations(integer) positive value parameter for simulated annealing algorithm (required)");
+            Console.WriteLine("  -cr, --cooling rate      Specifies the cooling rate(double) positive value parameter for simulated annealing algorithm (required)");
+            Console.WriteLine();
         }
-        public Program()
-        {
-            
-        }
+
+        //A statistic on how much time was spent waiting a red light for every car.
+        public static int NumberOfStops { get; set; } = 0;
 
         public static void Main(string[] args)
         {
@@ -48,10 +46,10 @@ namespace Traffic_Signaling
                         switch (args[i])
                         {
                             case "-i":
-                                inputFileName = args[i+1];
+                                inputFileName = args[i + 1];
                                 break;
                             case "-o":
-                                outputFileName = args[i+1];
+                                outputFileName = args[i + 1];
                                 break;
                             case "-t":
                                 temperature = int.Parse(args[i + 1]);
@@ -67,21 +65,17 @@ namespace Traffic_Signaling
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine("Exception." + ex.Message);
+                    Console.WriteLine();
+                    Console.WriteLine("An exception occurred: " + ex.Message);
                     DisplayUsage();
                     return;
                 }
 
 
-                if(string.IsNullOrEmpty(inputFileName) || string.IsNullOrEmpty(outputFileName)
-                    || temperature <= 0 || maxIterations <= 0 || coolingRate <= 0)
+                if (string.IsNullOrEmpty(inputFileName) || string.IsNullOrEmpty(outputFileName) || temperature <= 0 || maxIterations <= 0 || coolingRate <= 0)
                 {
+                    Console.WriteLine();
                     Console.WriteLine("Fill in the required parameters.");
-                    Console.WriteLine(inputFileName);
-                    Console.WriteLine(outputFileName);
-                    Console.WriteLine(temperature);
-                    Console.WriteLine(maxIterations);
-                    Console.WriteLine(coolingRate);
                     DisplayUsage();
                     return;
                 }
@@ -448,7 +442,7 @@ namespace Traffic_Signaling
             });
 
             List<int> carsNotInIntersectionIds = cars.Where(t => !t.Intersections.Select(x => x.Id)
-            .Contains(InterSectionId)).Select(t=>t.Id).ToList();
+            .Contains(InterSectionId)).Select(t => t.Id).ToList();
             List<Car> carsNotInIntersection = cars.Where(t => carsNotInIntersectionIds.Contains(t.Id)).ToList();
             cars = cars.Where(t => !carsNotInIntersectionIds.Contains(t.Id)).ToList();
 
@@ -534,7 +528,7 @@ namespace Traffic_Signaling
                             if (fullTime < 0)
                                 continue;
 
-                            
+
                             score += F + fullTime;
                             car.Score = F + fullTime;
 
@@ -693,7 +687,7 @@ namespace Traffic_Signaling
             } while (selectedIntersection.StreetTime.Keys.Count == 1);
 
             int period = selectedIntersection.GreenInterval;
-            int range = (int) (period/2) + 1;
+            int range = (int)(period / 2) + 1;
             do
             {
                 period = selectedIntersection.GreenInterval;
@@ -702,16 +696,16 @@ namespace Traffic_Signaling
             }
             while (period < selectedIntersection.Streets.Count);
             selectedIntersection.GreenInterval = period;
-            List<int> distributedTime = DistributeValue(selectedIntersection.GreenInterval, 
+            List<int> distributedTime = DistributeValue(selectedIntersection.GreenInterval,
                 selectedIntersection.StreetTime.Keys.Count, 1);
             //string street = selectedIntersection.StreetTime.Where(t => t.Value[0] == 0).Select(t=>t.Key).First();
             List<string> streets = selectedIntersection.StreetTime.OrderBy(t => t.Value[0])
-                .Select(t=>t.Key).ToList();
+                .Select(t => t.Key).ToList();
             int lastTime = 0;
             for (int i = 0; i < streets.Count; i++)
             {
                 string street = streets[i];
-                int greenTimeForStreet = (int) distributedTime[i];
+                int greenTimeForStreet = (int)distributedTime[i];
                 selectedIntersection.StreetTime[street] = new int[] { lastTime, lastTime + greenTimeForStreet };
                 lastTime += greenTimeForStreet;
             }
@@ -815,7 +809,7 @@ namespace Traffic_Signaling
                     Intersections = op.Item1
                 };
                 int newEnergy = DeltaFunction(cars, newSolution, F, D, op.Item2);
-                
+
                 if (newEnergy > currentEnergy)
                 {
                     currentSolution = newSolution;
