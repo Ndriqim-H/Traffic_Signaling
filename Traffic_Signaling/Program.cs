@@ -718,7 +718,7 @@ namespace Traffic_Signaling
         }
 
 
-        public static State SimulatedAnnealing(State state, List<Car> cars, int F, int D, double T = 100000, double CoolingRate = 0.999, int maxIterations = 10000)
+        public static State SimulatedAnnealing(State state, List<Car> cars, int F, int D, double T = 100000, double CoolingRate = 0.9, int maxIterations = 10000)
         {
             Random random = new Random();
             State currentSolution = Clone(state);
