@@ -6,13 +6,30 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 
 namespace Traffic_Signaling
 {
     class Program
     {
+
         //A statistic on how much time was spent waiting a red light for every car.
         public static int NumberOfStops { get; set; } = 0;
+        static void DisplayUsage()
+        {
+            Console.WriteLine("Usage: dotnet run -i <input filename> -o <output filename> -t <SA temperature> -mi <SA max iterations> -cr <cooling rate>");
+            Console.WriteLine("Parameters:");
+            Console.WriteLine("  -i, --input filename     Specifies the input filename parameter (required)");
+            Console.WriteLine("  -o, --output filename    Specifies the output filename parameter (required)");
+            Console.WriteLine("  -t, --temperature        Specifies the temperature(integer) parameter for simulated annealing algorithm (required)");
+            Console.WriteLine("  -mi, --max iterations    Specifies the max iterations(integer) parameter for simulated annealing algorithm (required)");
+            Console.WriteLine("  -cr, --cooling rate      Specifies the cooling rate(double) parameter for simulated annealing algorithm (required)");
+        }
+        public Program()
+        {
+            
+        }
+
         public static void Main(string[] args)
         {
             string inputFileName = "a_an_example";
@@ -21,16 +38,66 @@ namespace Traffic_Signaling
             int maxIterations = 10000;
             double coolingRate = 0.9;
 
-            if (args.Length > 0)
+            if(args.Length == 0)
             {
-                inputFileName = args[0];
-                outputFileName = args[1];
-                temperature = int.Parse(args[2]);
-                maxIterations = int.Parse(args[3]);
-                coolingRate = double.Parse(args[4]);
+                Console.WriteLine("No arguments provided.");
+                DisplayUsage();
+                return;
             }
 
-            var input = File.ReadAllLines($@"..\..\..\Inputs\{inputFileName}.in.txt");
+            if (args.Length > 0)
+            {
+                try
+                {
+                    for (int i = 0; i < args.Length; i++)
+                    {
+                        switch (args[i])
+                        {
+                            case "-i":
+                                inputFileName = args[i+1];
+                                break;
+                            case "-o":
+                                outputFileName = args[i+1];
+                                break;
+                            case "-t":
+                                temperature = int.Parse(args[i + 1]);
+                                break;
+                            case "-mi":
+                                maxIterations = int.Parse(args[i + 1]);
+                                break;
+                            case "-cr":
+                                coolingRate = double.Parse(args[i + 1]);
+                                break;
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Exception." + ex.Message);
+                    DisplayUsage();
+                    return;
+                }
+
+
+                if(string.IsNullOrEmpty(inputFileName) || string.IsNullOrEmpty(outputFileName)
+                    || temperature <= 0 || maxIterations <= 0 || coolingRate <= 0)
+                {
+                    Console.WriteLine("Required.");
+                    Console.WriteLine(inputFileName);
+                    Console.WriteLine(outputFileName);
+                    Console.WriteLine(temperature);
+                    Console.WriteLine(maxIterations);
+                    Console.WriteLine(coolingRate);
+                    DisplayUsage();
+                    return;
+                }
+            }
+
+            var projectDirectory = Directory.GetCurrentDirectory();
+            projectDirectory += "\\Inputs\\";
+            Console.WriteLine(projectDirectory);
+
+            var input = File.ReadAllLines($"{projectDirectory}{inputFileName}.in.txt");
 
             // Parse input
             var parameters = input[0].Split(' ');
