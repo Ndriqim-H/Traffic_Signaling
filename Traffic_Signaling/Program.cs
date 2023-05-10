@@ -15,7 +15,7 @@ namespace Traffic_Signaling
         public static int NumberOfStops { get; set; } = 0;
         public static void Main(string[] args)
         {
-            string inputFileName = "b_by_the_ocean";
+            string inputFileName = "a_an_example";
             string outputFileName = inputFileName;
             int temperature = 1000;
             int maxIterations = 10000;
@@ -161,7 +161,6 @@ namespace Traffic_Signaling
 
                 }
             }
-            x = usedIntersections.Any(t => t.Id == 1568);
             //Now there are 3 main scenarioes for each intersection:
             // 1. An intersection is never used by any car,
             //those have been removed when the "usedIntersections" list was being filled
@@ -214,6 +213,7 @@ namespace Traffic_Signaling
             };
 
             var test = SwitchRandomValuesOperator(state.Intersections);
+            var test2 = NudgeRandomTimesOperator(state.Intersections);
             //var t1 = usedIntersections[test.Item2];
             //var t2 = test.Item1[test.Item2];
 
@@ -585,6 +585,68 @@ namespace Traffic_Signaling
             return Tuple.Create(resultIntersections, resultIntersection.Id);
         }
 
+        static Tuple<List<Intersection>, int> NudgeRandomTimesOperator(List<Intersection> intersections)
+        {
+            Random random = new Random();
+            Intersection selectedIntersection;
+
+            do
+            {
+                int index = new Random().Next(intersections.Count);
+                selectedIntersection = intersections[index];
+            } while (selectedIntersection.StreetTime.Keys.Count == 1);
+
+            if(selectedIntersection.GreenInterval == selectedIntersection.Streets.Count)
+            {
+                selectedIntersection.GreenInterval++;
+            }
+            else if (random.NextDouble() < 0.5)
+            {
+                selectedIntersection.GreenInterval++;
+            }
+            else
+            {
+                selectedIntersection.GreenInterval--;
+            }
+
+            List<long> distributedTime = DistributeValue(selectedIntersection.GreenInterval, 
+                selectedIntersection.StreetTime.Keys.Count, 1);
+            //string street = selectedIntersection.StreetTime.Where(t => t.Value[0] == 0).Select(t=>t.Key).First();
+            List<string> streets = selectedIntersection.StreetTime.OrderBy(t => t.Value[0])
+                .Select(t=>t.Key).ToList();
+            int lastTime = 0;
+            for (int i = 0; i < streets.Count; i++)
+            {
+                string street = streets[i];
+                int greenTimeForStreet = (int) distributedTime[i];
+                selectedIntersection.StreetTime[street] = new int[] { lastTime, lastTime + greenTimeForStreet };
+                lastTime += greenTimeForStreet;
+            }
+
+            return new Tuple<List<Intersection>, int>(intersections, selectedIntersection.Id);
+        }
+
+        public static List<long> DistributeValue(long value, int n, long minAmount)
+        {
+            if (n * minAmount > value)
+            {
+                throw new ArgumentException("Minimum amount is too large");
+            }
+
+            List<long> amounts = Enumerable.Repeat(value / n, n).ToList();
+            long remaining = value - amounts.Sum();
+
+            for (int i = 0; i < n && remaining > 0; i++)
+            {
+                long delta = Math.Min(remaining, minAmount - amounts[i]);
+                amounts[i] += delta;
+                remaining -= delta;
+            }
+
+            return amounts;
+        }
+
+
         public static State SimulatedAnnealing(State state, List<Car> cars, int F, int D, double T = 100000, double CoolingRate = 0.9, int maxIterations = 10000)
         {
             Random random = new Random();
@@ -597,7 +659,7 @@ namespace Traffic_Signaling
 
             while (T > 0 && iterations > 0)
             {
-                var op = SwitchRandomValuesOperator(currentSolution.Intersections);
+                Tuple<List<Intersection>,int> op = SwitchRandomValuesOperator(currentSolution.Intersections);
                 State newSolution = new()
                 {
                     Intersections = op.Item1
