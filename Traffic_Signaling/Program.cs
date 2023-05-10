@@ -13,13 +13,17 @@ namespace Traffic_Signaling
 {
     class Program
     {
-        static void DisplayUsage()
+        static void DisplayUsage(string message = "")
         {
             Console.WriteLine();
+            if(!string.IsNullOrEmpty(message))
+            {
+                Console.WriteLine(message);
+            }
             Console.WriteLine("Usage: dotnet run -i <input filename> -o <output filename> -t <SA temperature> -mi <SA max iterations> -cr <SA cooling rate>");
             Console.WriteLine("Parameters: ");
-            Console.WriteLine("  -i     Specifies the input filename parameter (required)");
-            Console.WriteLine("  -o     Specifies the output filename parameter (required)");
+            Console.WriteLine("  -i     Specifies the input filename(string) parameter (required)");
+            Console.WriteLine("  -o     Specifies the output filename(string) parameter (required)");
             Console.WriteLine("  -t     Specifies the temperature(integer) positive value parameter for simulated annealing algorithm (required)");
             Console.WriteLine("  -mi    Specifies the max iterations(integer) positive value parameter for simulated annealing algorithm (required)");
             Console.WriteLine("  -cr    Specifies the cooling rate(double) positive value parameter for simulated annealing algorithm (required)");
@@ -41,8 +45,10 @@ namespace Traffic_Signaling
             {
                 try
                 {
-                    for (int i = 0; i < args.Length; i++)
+                    int count = 0;
+                    for (int i = 0; i < args.Length; i=i+2)
                     {
+                        count++;
                         switch (args[i])
                         {
                             case "-i":
@@ -65,21 +71,23 @@ namespace Traffic_Signaling
                                 return;
                         }
                     }
+
+                    if(count > 5)
+                    {
+                        DisplayUsage("Number of parameters is exceeded");
+                        return;
+                    }
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine();
-                    Console.WriteLine("An exception occurred: " + ex.Message);
-                    DisplayUsage();
+                    DisplayUsage("An exception occurred: " + ex.Message);
                     return;
                 }
 
 
                 if (string.IsNullOrEmpty(inputFileName) || string.IsNullOrEmpty(outputFileName) || temperature <= 0 || maxIterations <= 0 || coolingRate <= 0)
                 {
-                    Console.WriteLine();
-                    Console.WriteLine("Fill in the required parameters.");
-                    DisplayUsage();
+                    DisplayUsage("Fill in the required parameters.");
                     return;
                 }
             }
