@@ -213,7 +213,7 @@ namespace Traffic_Signaling
             };
 
             var test = SwitchRandomValuesOperator(state.Intersections);
-            var test2 = NudgeRandomTimesOperator(state.Intersections);
+            var test2 = NudgeRandomTimesOperator(state.Intersections, 7);
             //var t1 = usedIntersections[test.Item2];
             //var t2 = test.Item1[test.Item2];
 
@@ -585,31 +585,36 @@ namespace Traffic_Signaling
             return Tuple.Create(resultIntersections, resultIntersection.Id);
         }
 
-        static Tuple<List<Intersection>, int> NudgeRandomTimesOperator(List<Intersection> intersections)
+        static Tuple<List<Intersection>, int> NudgeRandomTimesOperator(List<Intersection> intersections, int range)
         {
+
+            List<Intersection> resultIntersections = intersections.ConvertAll(intersection => new Intersection
+            {
+                GreenInterval = intersection.GreenInterval,
+                Id = intersection.Id,
+                Streets = intersection.Streets.ToList(), // create a new list with a copy of Streets
+                StreetTime = new Dictionary<string, int[]>(intersection.StreetTime) // create a new dictionary with a copy of StreetTime
+            });
+
             Random random = new Random();
             Intersection selectedIntersection;
 
             do
             {
-                int index = new Random().Next(intersections.Count);
-                selectedIntersection = intersections[index];
+                int index = new Random().Next(resultIntersections.Count);
+                selectedIntersection = resultIntersections[index];
             } while (selectedIntersection.StreetTime.Keys.Count == 1);
 
-            if(selectedIntersection.GreenInterval == selectedIntersection.Streets.Count)
+            int period = selectedIntersection.GreenInterval;
+            do
             {
-                selectedIntersection.GreenInterval++;
+                period = selectedIntersection.GreenInterval;
+                int rand = new Random().Next(-range, range);
+                period += rand;
             }
-            else if (random.NextDouble() < 0.5)
-            {
-                selectedIntersection.GreenInterval++;
-            }
-            else
-            {
-                selectedIntersection.GreenInterval--;
-            }
-
-            List<long> distributedTime = DistributeValue(selectedIntersection.GreenInterval, 
+            while (period < selectedIntersection.Streets.Count);
+            selectedIntersection.GreenInterval = period;
+            List<int> distributedTime = DistributeValue(selectedIntersection.GreenInterval, 
                 selectedIntersection.StreetTime.Keys.Count, 1);
             //string street = selectedIntersection.StreetTime.Where(t => t.Value[0] == 0).Select(t=>t.Key).First();
             List<string> streets = selectedIntersection.StreetTime.OrderBy(t => t.Value[0])
@@ -623,27 +628,74 @@ namespace Traffic_Signaling
                 lastTime += greenTimeForStreet;
             }
 
-            return new Tuple<List<Intersection>, int>(intersections, selectedIntersection.Id);
+            return new Tuple<List<Intersection>, int>(resultIntersections, selectedIntersection.Id);
         }
 
-        public static List<long> DistributeValue(long value, int n, long minAmount)
+        static Tuple<List<Intersection>, int> RandomTimeDistributionOperator(List<Intersection> intersections)
         {
-            if (n * minAmount > value)
+
+            List<Intersection> resultIntersections = intersections.ConvertAll(intersection => new Intersection
             {
-                throw new ArgumentException("Minimum amount is too large");
+                GreenInterval = intersection.GreenInterval,
+                Id = intersection.Id,
+                Streets = intersection.Streets.ToList(), // create a new list with a copy of Streets
+                StreetTime = new Dictionary<string, int[]>(intersection.StreetTime) // create a new dictionary with a copy of StreetTime
+            });
+
+            Random random = new Random();
+            Intersection selectedIntersection;
+
+            do
+            {
+                int index = new Random().Next(resultIntersections.Count);
+                selectedIntersection = resultIntersections[index];
+            } while (selectedIntersection.StreetTime.Keys.Count == 1);
+
+            List<int> distributedTime = DistributeValue(selectedIntersection.GreenInterval,
+                 selectedIntersection.StreetTime.Keys.Count, 1);
+            //string street = selectedIntersection.StreetTime.Where(t => t.Value[0] == 0).Select(t=>t.Key).First();
+            List<string> streets = selectedIntersection.StreetTime.OrderBy(t => t.Value[0])
+                .Select(t => t.Key).ToList();
+            int lastTime = 0;
+            for (int i = 0; i < streets.Count; i++)
+            {
+                string street = streets[i];
+                int greenTimeForStreet = (int)distributedTime[i];
+                selectedIntersection.StreetTime[street] = new int[] { lastTime, lastTime + greenTimeForStreet };
+                lastTime += greenTimeForStreet;
             }
 
-            List<long> amounts = Enumerable.Repeat(value / n, n).ToList();
-            long remaining = value - amounts.Sum();
+            return new Tuple<List<Intersection>, int>(resultIntersections, selectedIntersection.Id);
+        }
 
-            for (int i = 0; i < n && remaining > 0; i++)
+        public static List<int> DistributeValue(int totalValue, int numPlaces, int minValue)
+        {
+            if (numPlaces * minValue > totalValue)
             {
-                long delta = Math.Min(remaining, minAmount - amounts[i]);
-                amounts[i] += delta;
-                remaining -= delta;
+                throw new ArgumentException("Minimum value is too large");
             }
 
-            return amounts;
+            List<int> result = new List<int>(numPlaces);
+            int sum = 0;
+
+            for (int i = 0; i < numPlaces; i++)
+            {
+                int value = minValue;
+                result.Add(value);
+                sum += value;
+            }
+
+            int remainingValue = totalValue - sum;
+
+            while (remainingValue > 0)
+            {
+                int value = Math.Min(remainingValue, minValue);
+                int index = new Random().Next(numPlaces);
+                result[index] += value;
+                remainingValue -= value;
+            }
+
+            return result;
         }
 
 
