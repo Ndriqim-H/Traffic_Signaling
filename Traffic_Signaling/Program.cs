@@ -7,32 +7,105 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 
 namespace Traffic_Signaling
 {
     class Program
     {
+        static void DisplayUsage(string message = "")
+        {
+            Console.WriteLine();
+            if(!string.IsNullOrEmpty(message))
+            {
+                Console.WriteLine(message);
+            }
+            Console.WriteLine("Usage: dotnet run -i <input filename> -o <output filename> -t <SA temperature> -mi <SA max iterations> -cr <SA cooling rate>");
+            Console.WriteLine("Parameters: ");
+            Console.WriteLine("  -i     Specifies the input filename(string) parameter (required)");
+            Console.WriteLine("  -o     Specifies the output filename(string) parameter (required)");
+            Console.WriteLine("  -t     Specifies the temperature(integer) positive value parameter for simulated annealing algorithm (required)");
+            Console.WriteLine("  -mi    Specifies the max iterations(integer) positive value parameter for simulated annealing algorithm (required)");
+            Console.WriteLine("  -cr    Specifies the cooling rate(double) positive value parameter for simulated annealing algorithm (required)");
+            Console.WriteLine();
+        }
+
         //A statistic on how much time was spent waiting a red light for every car.
         public static int NumberOfStops { get; set; } = 0;
+
         public static void Main(string[] args)
         {
-            //string inputFileName = "a_an_example";
-            string inputFileName = "b_by_the_ocean";
-            string outputFileName = inputFileName;
-            int temperature = 1000;
-            int maxIterations = 10000;
-            double coolingRate = 0.9;
+            string inputFileName = "";
+            string outputFileName = "";
+            int temperature = 0;
+            int maxIterations = 0;
+            double coolingRate = 0;
 
-            if (args.Length > 0)
+            if (args.Length > 0) //From command-line
             {
-                inputFileName = args[0];
-                outputFileName = args[1];
-                temperature = int.Parse(args[2]);
-                maxIterations = int.Parse(args[3]);
-                coolingRate = double.Parse(args[4]);
+                try
+                {
+                    int count = 0;
+                    for (int i = 0; i < args.Length; i=i+2)
+                    {
+                        count++;
+                        switch (args[i])
+                        {
+                            case "-i":
+                                inputFileName = args[i + 1];
+                                break;
+                            case "-o":
+                                outputFileName = args[i + 1];
+                                break;
+                            case "-t":
+                                temperature = int.Parse(args[i + 1]);
+                                break;
+                            case "-mi":
+                                maxIterations = int.Parse(args[i + 1]);
+                                break;
+                            case "-cr":
+                                coolingRate = double.Parse(args[i + 1]);
+                                break;
+                            default:
+                                DisplayUsage();
+                                return;
+                        }
+                    }
+
+                    if(count > 5)
+                    {
+                        DisplayUsage("Number of parameters is exceeded");
+                        return;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    DisplayUsage("An exception occurred: " + ex.Message);
+                    return;
+                }
+
+
+                if (string.IsNullOrEmpty(inputFileName) || string.IsNullOrEmpty(outputFileName) || temperature <= 0 || maxIterations <= 0 || coolingRate <= 0)
+                {
+                    DisplayUsage("Fill in the required parameters.");
+                    return;
+                }
+            }
+            else
+            {
+                inputFileName = "b_by_the_ocean";
+                outputFileName = inputFileName;
+                temperature = 1000;
+                maxIterations = 10000;
+                coolingRate = 0.9;
             }
 
-            var input = File.ReadAllLines($@"..\..\..\Inputs\{inputFileName}.in.txt");
+            string projectDirectory = "";
+            projectDirectory = Directory.GetCurrentDirectory();
+            projectDirectory += "\\Inputs\\";
+            Console.WriteLine(projectDirectory);
+
+            var input = File.ReadAllLines($"{projectDirectory}{inputFileName}.in.txt");
 
             // Parse input
             var parameters = input[0].Split(' ');
