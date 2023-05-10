@@ -16,6 +16,7 @@ namespace Traffic_Signaling
         public static int NumberOfStops { get; set; } = 0;
         public static void Main(string[] args)
         {
+            //string inputFileName = "a_an_example";
             string inputFileName = "b_by_the_ocean";
             string outputFileName = inputFileName;
             int temperature = 1000;
@@ -220,6 +221,7 @@ namespace Traffic_Signaling
 
             State solution = SimulatedAnnealing(state, paths, F, D);
 
+
             int eval = EvaluationFunction(paths, state, F, D);
             //int delta = DeltaFunction(paths, state, F, D, 0);
             int solEval = EvaluationFunction(paths, solution, F, D);
@@ -359,7 +361,39 @@ namespace Traffic_Signaling
             return score;
         }
 
-        static int DeltaFunction(List<Car> cars1, State state, int F, int D, int InterSectionId)
+        static int DeltaFunction(List<Car> cars1, State state, int F, int D, int[] InterSectionIds)
+        {
+            int delta = 0;
+
+
+            List<Car> cars = cars1.ConvertAll(t => new Car()
+            {
+                DestinationName = t.DestinationName,
+                DestinationTime = t.DestinationTime,
+                Finished = false,
+                Moving = false,
+                Id = t.Id,
+                Intersections = t.Intersections,
+                NumberOfIntersections = t.NumberOfIntersections,
+                Position = 0,
+                Streets = t.Streets,
+                T1Movement = t.T1Movement,
+                Score = t.Score,
+            });
+
+            List<int> carsNotInIntersectionIds = cars
+                .Where(t => !t.Intersections.Any(x => InterSectionIds.Contains(x.Id))).Select(t => t.Id)
+                .ToList();
+
+            List<Car> carsNotInIntersection = cars.Where(t => carsNotInIntersectionIds.Contains(t.Id)).ToList();
+            cars = cars.Where(t => !carsNotInIntersectionIds.Contains(t.Id)).ToList();
+
+            delta += carsNotInIntersection.Sum(t => t.Score) + EvaluationFunction(cars, state, F, D);
+
+            return delta;
+        }
+
+        static int DeltaFunction1(List<Car> cars1, State state, int F, int D, int[] InterSectionIds)
         {
             int delta = 0;
 
@@ -378,8 +412,10 @@ namespace Traffic_Signaling
                 Score = t.Score,
             });
 
-            List<int> carsNotInIntersectionIds = cars.Where(t => !t.Intersections.Select(x => x.Id)
-            .Contains(InterSectionId)).Select(t=>t.Id).ToList();
+            List<int> carsNotInIntersectionIds = cars
+                .Where(t => !t.Intersections.Any(x => InterSectionIds.Contains(x.Id))).Select(t => t.Id)
+                .ToList();
+
             List<Car> carsNotInIntersection = cars.Where(t => carsNotInIntersectionIds.Contains(t.Id)).ToList();
             cars = cars.Where(t => !carsNotInIntersectionIds.Contains(t.Id)).ToList();
 
@@ -465,8 +501,9 @@ namespace Traffic_Signaling
                             if (fullTime < 0)
                                 continue;
 
-                            
+
                             score += F + fullTime;
+                            cars1[i].Score = F + fullTime;
                             car.Score = F + fullTime;
 
                             continue;
@@ -545,7 +582,7 @@ namespace Traffic_Signaling
         //This operator finds a random intersection that has more than one incoming street and switches 
         //the green time intervals between 2 random streets.
         //This is a simple operator and it doesn't change the period of the signaling.
-        static Tuple<List<Intersection>, int> SwitchRandomValuesOperator(List<Intersection> intersections)
+        static Tuple<List<Intersection>, int[]> SwitchRandomValuesOperator(List<Intersection> intersections)
         {
             //We first deep copy the list, since we the algorithm may still select the old one.
             List<Intersection> resultIntersections = intersections.ConvertAll(intersection => new Intersection
@@ -600,10 +637,10 @@ namespace Traffic_Signaling
                 resultIntersections[index] = resultIntersection;
             }
 
-            return Tuple.Create(resultIntersections, resultIntersection.Id);
+            return Tuple.Create(resultIntersections, new int[] { resultIntersection.Id });
         }
 
-        static Tuple<List<Intersection>, int> NudgeRandomTimesOperator(List<Intersection> intersections)
+        static Tuple<List<Intersection>, int[]> NudgeRandomTimesOperator(List<Intersection> intersections)
         {
 
             List<Intersection> resultIntersections = intersections.ConvertAll(intersection => new Intersection
@@ -624,7 +661,7 @@ namespace Traffic_Signaling
             } while (selectedIntersection.StreetTime.Keys.Count == 1);
 
             int period = selectedIntersection.GreenInterval;
-            int range = (int) (period/2) + 1;
+            int range = (int)(period / 2) + 1;
             do
             {
                 period = selectedIntersection.GreenInterval;
@@ -633,24 +670,24 @@ namespace Traffic_Signaling
             }
             while (period < selectedIntersection.Streets.Count);
             selectedIntersection.GreenInterval = period;
-            List<int> distributedTime = DistributeValue(selectedIntersection.GreenInterval, 
+            List<int> distributedTime = DistributeValue(selectedIntersection.GreenInterval,
                 selectedIntersection.StreetTime.Keys.Count, 1);
             //string street = selectedIntersection.StreetTime.Where(t => t.Value[0] == 0).Select(t=>t.Key).First();
             List<string> streets = selectedIntersection.StreetTime.OrderBy(t => t.Value[0])
-                .Select(t=>t.Key).ToList();
+                .Select(t => t.Key).ToList();
             int lastTime = 0;
             for (int i = 0; i < streets.Count; i++)
             {
                 string street = streets[i];
-                int greenTimeForStreet = (int) distributedTime[i];
+                int greenTimeForStreet = (int)distributedTime[i];
                 selectedIntersection.StreetTime[street] = new int[] { lastTime, lastTime + greenTimeForStreet };
                 lastTime += greenTimeForStreet;
             }
 
-            return new Tuple<List<Intersection>, int>(resultIntersections, selectedIntersection.Id);
+            return new Tuple<List<Intersection>, int[]>(resultIntersections, new int[] { selectedIntersection.Id });
         }
 
-        static Tuple<List<Intersection>, int> RandomTimeDistributionOperator(List<Intersection> intersections)
+        static Tuple<List<Intersection>, int[]> RandomTimeDistributionOperator(List<Intersection> intersections)
         {
 
             List<Intersection> resultIntersections = intersections.ConvertAll(intersection => new Intersection
@@ -684,9 +721,55 @@ namespace Traffic_Signaling
                 lastTime += greenTimeForStreet;
             }
 
-            return new Tuple<List<Intersection>, int>(resultIntersections, selectedIntersection.Id);
+            return new Tuple<List<Intersection>, int[]>(resultIntersections, new int[] { selectedIntersection.Id });
         }
 
+        static Tuple<List<Intersection>, int[]> RandomMultipleTimeDistributionOperator(List<Intersection> intersections, int nrIntersections)
+        {
+            List<Intersection> resultIntersections = intersections.ConvertAll(intersection => new Intersection
+            {
+                GreenInterval = intersection.GreenInterval,
+                Id = intersection.Id,
+                Streets = intersection.Streets.ToList(), // create a new list with a copy of Streets
+                StreetTime = new Dictionary<string, int[]>(intersection.StreetTime) // create a new dictionary with a copy of StreetTime
+            });
+
+            int count = 0;
+            int[] changedIntersections = new int[nrIntersections];
+            for (int i = 0; i < changedIntersections.Length; i++)
+            {
+                changedIntersections[i] = -1;
+            }
+            for (int i = 0; i < changedIntersections.Length; i++)
+            {
+                Random random = new Random();
+                Intersection selectedIntersection;
+                int index = 0;
+                do
+                {
+                    index = new Random().Next(resultIntersections.Count);
+                    selectedIntersection = resultIntersections[index];
+                } while (selectedIntersection.StreetTime.Keys.Count == 1 || changedIntersections.Contains(index));
+
+                List<int> distributedTime = DistributeValue(selectedIntersection.GreenInterval,
+                     selectedIntersection.StreetTime.Keys.Count, 1);
+                //string street = selectedIntersection.StreetTime.Where(t => t.Value[0] == 0).Select(t=>t.Key).First();
+                List<string> streets = selectedIntersection.StreetTime.OrderBy(t => t.Value[0])
+                    .Select(t => t.Key).ToList();
+                int lastTime = 0;
+                for (int j = 0; j < streets.Count; j++)
+                {
+                    string street = streets[j];
+                    int greenTimeForStreet = (int)distributedTime[j];
+                    selectedIntersection.StreetTime[street] = new int[] { lastTime, lastTime + greenTimeForStreet };
+                    lastTime += greenTimeForStreet;
+                }
+
+                changedIntersections[i] = index;
+            }
+            
+            return new Tuple <List<Intersection>,int[]> (resultIntersections, changedIntersections);
+        }
         public static List<int> DistributeValue(int totalValue, int numPlaces, int minValue)
         {
             if (numPlaces * minValue > totalValue)
@@ -718,7 +801,7 @@ namespace Traffic_Signaling
         }
 
 
-        public static State SimulatedAnnealing(State state, List<Car> cars, int F, int D, double T = 100000, double CoolingRate = 0.9, int maxIterations = 10000)
+        public static State SimulatedAnnealing(State state, List<Car> cars, int F, int D, double T = 100000, double CoolingRate = 0.99, int maxIterations = 10000)
         {
             Random random = new Random();
             State currentSolution = Clone(state);
@@ -730,23 +813,28 @@ namespace Traffic_Signaling
 
             while (T > 0 && iterations > 0)
             {
-                Tuple<List<Intersection>, int> op;
+                Tuple<List<Intersection>, int[]> op;
 
                 double rand = random.NextDouble();
-                if (rand < 0.5)
+                if (rand < 0.25)
                     op = SwitchRandomValuesOperator(currentSolution.Intersections);
-                else if (rand < 0.75)
+                else if (rand < 0.5)
                     op = NudgeRandomTimesOperator(currentSolution.Intersections);
-                else
+                else if (rand < 0.75)
                     op = RandomTimeDistributionOperator(currentSolution.Intersections);
-
+                else
+                    op = RandomMultipleTimeDistributionOperator(currentSolution.Intersections, random.Next(2, 15));
 
                 State newSolution = new()
                 {
                     Intersections = op.Item1
                 };
                 int newEnergy = DeltaFunction(cars, newSolution, F, D, op.Item2);
-                
+                int newEnergy1 = EvaluationFunction(cars, newSolution, F, D);
+
+                //int x = 0;
+                //newEnergy = DeltaFunction(cars, newSolution, F, D, op.Item2);
+                //newEnergy1 = EvaluationFunction(cars, newSolution, F, D);
                 if (newEnergy > currentEnergy)
                 {
                     currentSolution = newSolution;
