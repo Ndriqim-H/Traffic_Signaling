@@ -16,13 +16,13 @@ namespace Traffic_Signaling
         static void DisplayUsage()
         {
             Console.WriteLine();
-            Console.WriteLine("Usage: dotnet run -i <input filename> -o <output filename> -t <SA temperature> -mi <SA max iterations> -cr <cooling rate>");
-            Console.WriteLine("Parameters:");
-            Console.WriteLine("  -i, --input filename     Specifies the input filename parameter (required)");
-            Console.WriteLine("  -o, --output filename    Specifies the output filename parameter (required)");
-            Console.WriteLine("  -t, --temperature        Specifies the temperature(integer) positive value parameter for simulated annealing algorithm (required)");
-            Console.WriteLine("  -mi, --max iterations    Specifies the max iterations(integer) positive value parameter for simulated annealing algorithm (required)");
-            Console.WriteLine("  -cr, --cooling rate      Specifies the cooling rate(double) positive value parameter for simulated annealing algorithm (required)");
+            Console.WriteLine("Usage: dotnet run -i <input filename> -o <output filename> -t <SA temperature> -mi <SA max iterations> -cr <SA cooling rate>");
+            Console.WriteLine("Parameters: ");
+            Console.WriteLine("  -i     Specifies the input filename parameter (required)");
+            Console.WriteLine("  -o     Specifies the output filename parameter (required)");
+            Console.WriteLine("  -t     Specifies the temperature(integer) positive value parameter for simulated annealing algorithm (required)");
+            Console.WriteLine("  -mi    Specifies the max iterations(integer) positive value parameter for simulated annealing algorithm (required)");
+            Console.WriteLine("  -cr    Specifies the cooling rate(double) positive value parameter for simulated annealing algorithm (required)");
             Console.WriteLine();
         }
 
@@ -60,6 +60,9 @@ namespace Traffic_Signaling
                             case "-cr":
                                 coolingRate = double.Parse(args[i + 1]);
                                 break;
+                            default:
+                                DisplayUsage();
+                                return;
                         }
                     }
                 }
