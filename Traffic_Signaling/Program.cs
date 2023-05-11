@@ -292,19 +292,18 @@ namespace Traffic_Signaling
             //var t1 = usedIntersections[test.Item2];
             //var t2 = test.Item1[test.Item2];
 
-            State solution = SimulatedAnnealing(state, paths, F, D);
-
-
+            State solution = SimulatedAnnealing(state, paths, F, D, temperature, coolingRate, maxIterations);
+                                                                    
             int eval = EvaluationFunction(paths, state, F, D);
             //int delta = DeltaFunction(paths, state, F, D, 0);
             int solEval = EvaluationFunction(paths, solution, F, D);
             Console.WriteLine($"The calculated evaluation function for initial solution is: {eval:#,#}\n" +
-                $"The best solution found has the score: {solEval:#,#}");
+                $"The best solution found has the score: {solEval:#,#}\n"+
+                $"The solution has been saved at {outputFileName}.out.txt!");
 
-            //WriteOutputFile($"{inputFileName}.out123.txt", usedIntersections);
+            WriteOutputFile($"{outputFileName}.out.txt", solution.Intersections);
 
-            //WriteOutputFile($@"../../../Outputs/{inputFileName}2.out.txt", usedIntersections);
-            //Console.WriteLine("Hello World!");
+            
 
         }
 
@@ -437,7 +436,6 @@ namespace Traffic_Signaling
         static int DeltaFunction(List<Car> cars1, State state, int F, int D, int[] InterSectionIds)
         {
             int delta = 0;
-
 
             List<Car> cars = cars1.ConvertAll(t => new Car()
             {
@@ -903,7 +901,7 @@ namespace Traffic_Signaling
                     Intersections = op.Item1
                 };
                 int newEnergy = DeltaFunction(cars, newSolution, F, D, op.Item2);
-                int newEnergy1 = EvaluationFunction(cars, newSolution, F, D);
+                //int newEnergy1 = EvaluationFunction(cars, newSolution, F, D);
 
                 //int x = 0;
                 //newEnergy = DeltaFunction(cars, newSolution, F, D, op.Item2);

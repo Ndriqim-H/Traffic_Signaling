@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "Traffic_Signaling": {
+      "commandName": "Project",
+      "commandLineArgs": "-i c_checkmate -o c_checkmate-o -t 50000 -mi 5000 -cr 0.8"
+    }
+  }
+}
