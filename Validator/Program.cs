@@ -6,7 +6,7 @@ class Program
 
     public static void Main(string[] args)
     {
-        string inputFileName = "a_an_example.in";
+        string inputFileName = "b_by_the_ocean.in";
 
         string projectDirectory = "";
         projectDirectory = Directory.GetCurrentDirectory();
@@ -73,12 +73,13 @@ class Program
             });
         }
 
-        string uo = "a_an_example.in";
+        string uo = "b_by_the_ocean1";
         string asd = $"{projectDirectory}{uo}";
-        List<Intersection> inasd = ParseSubmissionFile(streets, uo);
+        
+        List<Intersection> submissionIntersections = ParseSubmissionFile(streets, uo);
         State state1 = new()
         {
-            Intersections = inasd
+            Intersections = submissionIntersections
         };
 
         int score = EvaluationFunction(cars, state1, F, D);
@@ -139,7 +140,6 @@ class Program
                     count++;
                     int t = int.Parse(street[1]);
                     intersection.StreetTime ??= new Dictionary<string, int[]>();
-
                     intersection.StreetTime[street[0]] = new[] { time, time + t };
 
                     time += t;
