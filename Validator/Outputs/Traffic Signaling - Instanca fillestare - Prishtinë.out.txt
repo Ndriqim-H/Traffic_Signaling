@@ -1,0 +1,23 @@
+6
+0
+3
+Qerimi-FIEK 2
+Rr.B-FIEK 2
+Menza-FIEK 2
+3
+2
+FIEK-Menza 2
+Katedralja-Menza 2
+5
+1
+Menza-Katedralja 2147483647
+1
+2
+EULEX-Rr.B 2
+FIEK-Rr.B 2
+4
+1
+FIEK-Qerimi 2147483647
+8
+1
+Qerimi-Qafa 2147483647

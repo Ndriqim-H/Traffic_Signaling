@@ -16,7 +16,7 @@ namespace Traffic_Signaling
         static void DisplayUsage(string message = "")
         {
             Console.WriteLine();
-            if(!string.IsNullOrEmpty(message))
+            if (!string.IsNullOrEmpty(message))
             {
                 Console.WriteLine(message);
             }
@@ -46,7 +46,7 @@ namespace Traffic_Signaling
                 try
                 {
                     int count = 0;
-                    for (int i = 0; i < args.Length; i=i+2)
+                    for (int i = 0; i < args.Length; i = i + 2)
                     {
                         count++;
                         switch (args[i])
@@ -72,7 +72,7 @@ namespace Traffic_Signaling
                         }
                     }
 
-                    if(count > 5)
+                    if (count > 5)
                     {
                         DisplayUsage("Number of parameters is exceeded");
                         return;
@@ -93,7 +93,7 @@ namespace Traffic_Signaling
             }
             else
             {
-                inputFileName = "b_by_the_ocean";
+                inputFileName = "a_an_example.in";
                 outputFileName = inputFileName;
                 temperature = 1000;
                 maxIterations = 10000;
@@ -120,7 +120,17 @@ namespace Traffic_Signaling
             //Number of points for reaching the destination on time
             var F = int.Parse(parameters[4]);
 
+            string uo = "a_an_example.in";
+            string asd = $"{projectDirectory}{uo}";
+            List<Intersection> inasd = ParseSubmissionFile(asd, uo);
+            State state1 = new()
+            {
+                Intersections = inasd
+            };
 
+
+
+            //int subScore = EvaluationFunction(inasd);
             //Parse all the streets
             List<Street> streets = new();
             for (int i = 1; i <= S; i++)
@@ -293,17 +303,17 @@ namespace Traffic_Signaling
             //var t2 = test.Item1[test.Item2];
 
             State solution = SimulatedAnnealing(state, paths, F, D, temperature, coolingRate, maxIterations);
-                                                                    
+
             int eval = EvaluationFunction(paths, state, F, D);
             //int delta = DeltaFunction(paths, state, F, D, 0);
             int solEval = EvaluationFunction(paths, solution, F, D);
             Console.WriteLine($"The calculated evaluation function for initial solution is: {eval:#,#}\n" +
-                $"The best solution found has the score: {solEval:#,#}\n"+
+                $"The best solution found has the score: {solEval:#,#}\n" +
                 $"The solution has been saved at {outputFileName}.out.txt!");
 
             WriteOutputFile($"{outputFileName}.out.txt", solution.Intersections);
 
-            
+
 
         }
 
@@ -650,6 +660,119 @@ namespace Traffic_Signaling
             File.WriteAllLines(outputFile, outputLines);
         }
 
+        static List<Intersection> ParseSubmissionFile(string inputFile, string outputFile)
+        {
+
+            var input = File.ReadAllLines($"{inputFile}.txt");
+
+            // Parse input
+            var parameters = input[0].Split(' ');
+            //Simulation duration
+            var D = int.Parse(parameters[0]);
+            //Number of intersections
+            var I = int.Parse(parameters[1]);
+            //Number of streets
+            var S = int.Parse(parameters[2]);
+            //Number of cars
+            var V = int.Parse(parameters[3]);
+            //Number of points for reaching the destination on time
+            var F = int.Parse(parameters[4]);
+
+            List<Street> streets = new();
+            for (int i = 1; i <= S; i++)
+            {
+                streets.Add(new Street()
+                {
+                    Id = i,
+                    Starts = int.Parse(input[i].Split(' ')[0]),
+                    Ends = int.Parse(input[i].Split(' ')[1]),
+                    Name = input[i].Split(' ')[2],
+                    Time = int.Parse(input[i].Split(' ')[3])
+                });
+            }
+
+
+            List<Intersection> intersections = new();
+            //Read file 
+            if (outputFile.Contains(".out"))
+                outputFile.Replace(".out", "");
+            var output = File.ReadAllLines($"{outputFile}.out.txt");
+            int intersectionCount = int.Parse(output[0]);
+            int count = 1;
+            while (intersectionCount > 0)
+            {
+                int streetId = 0;
+                int intersectionId = int.Parse(output[count]);
+                count++;
+                Intersection intersection = new()
+                {
+                    Id = intersectionId,
+                    Streets = new()
+                };
+                int streetCount = int.Parse(output[count]);
+                count++;
+                if (streetCount == 1)
+                {
+                    string[] street = output[count].Split(" ");
+                    count++;
+                    intersection.StreetTime = new()
+                    {
+                        {street[0], new[]{0,int.MaxValue } },
+                    };
+                    intersection.GreenInterval = int.MaxValue;
+                    Street streetFromInput = streets.Where(t=>t.Name == street[0]).FirstOrDefault();
+                    Street street1 = new()
+                    {
+                        Ends = intersectionId,
+                        Name = street[0],
+                        Time = streetFromInput.Time,
+                        Id = streetFromInput.Id,
+                    };
+                    intersection.Streets.Add(street1);
+                    //count += 3;
+                    streetId++;
+                }
+                else
+                {
+                    int time = 0;
+                    
+                    for (int i = 0; i < streetCount; i++)
+                    {
+                        string[] street = output[count].Split(" ");
+                        count++;
+                        int t = int.Parse(street[1]);
+                        intersection.StreetTime = new()
+                        {
+                            {street[0], new[]{ time, time + t} },
+                        };
+                        time += t;
+                        Street streetFromInput = streets.Where(t => t.Name == street[0]).FirstOrDefault();
+
+                        Street street1 = new()
+                        {
+                            Ends = intersectionId,
+                            Name = street[0],
+                            Time = streetFromInput.Time,
+                            Id = streetFromInput.Id,
+                        };
+
+                        streetId++;
+                    }
+                    intersection.GreenInterval = time;
+                    
+                }
+
+                intersections.Add(intersection);
+                intersectionCount--;
+            }
+
+            
+
+            
+
+            return intersections;
+        }
+
         //This operator finds a random intersection that has more than one incoming street and switches 
         //the green time intervals between 2 random streets.
         //This is a simple operator and it doesn't change the period of the signaling.
@@ -838,8 +961,8 @@ namespace Traffic_Signaling
 
                 changedIntersections[i] = index;
             }
-            
-            return new Tuple <List<Intersection>,int[]> (resultIntersections, changedIntersections);
+
+            return new Tuple<List<Intersection>, int[]>(resultIntersections, changedIntersections);
         }
         public static List<int> DistributeValue(int totalValue, int numPlaces, int minValue)
         {
@@ -901,7 +1024,7 @@ namespace Traffic_Signaling
                     Intersections = op.Item1
                 };
                 int newEnergy = DeltaFunction(cars, newSolution, F, D, op.Item2);
-                //int newEnergy1 = EvaluationFunction(cars, newSolution, F, D);
+                int newEnergy1 = EvaluationFunction(cars, newSolution, F, D);
 
                 //int x = 0;
                 //newEnergy = DeltaFunction(cars, newSolution, F, D, op.Item2);

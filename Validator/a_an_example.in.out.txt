@@ -1,0 +1,11 @@
+3
+0
+1
+rue-de-londres 2147483647
+1
+2
+rue-d-amsterdam 2
+rue-d-athenes 2
+2
+1
+rue-de-moscou 2147483647
